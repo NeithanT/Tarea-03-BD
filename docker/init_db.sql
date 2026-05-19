@@ -1,220 +1,183 @@
--- [Previous comments maintained for reference]
--- ... (analysis comments)
+-- El esquema para la Tarea 03 de Bases
+-- ===== Plantilla Obrera =====
 
--- =============================================
--- DATABASE SCHEMA DESIGN - PAYROLL SYSTEM
--- DIALECT: SQL SERVER
--- =============================================
-
--- 1. CATALOGOS
-CREATE TABLE TipoEvento (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Nombre VARCHAR(100) NOT NULL,
-    Descripcion VARCHAR(255)
-);
-
-CREATE TABLE Feriado (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Fecha DATE NOT NULL,
-    Nombre VARCHAR(100) NOT NULL
-);
-
-CREATE TABLE TipoMovimiento (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Nombre VARCHAR(100) NOT NULL,
-    EsDebito BIT NOT NULL DEFAULT 0 -- 1: Deducción, 0: Devengado
-);
-
-CREATE TABLE TipoDeduccion (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Nombre VARCHAR(100) NOT NULL,
-    EsObligatorio BIT NOT NULL DEFAULT 0
-);
-
-CREATE TABLE TipoJornada (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Nombre VARCHAR(100) NOT NULL,
-    HoraInicio TIME NOT NULL,
-    HoraFin TIME NOT NULL,
-    EsExtra BIT NOT NULL DEFAULT 0
-);
-
--- 2. EMPLEADOS
+-- Todo inicia desde los empleados
 CREATE TABLE Puesto (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Nombre VARCHAR(100) NOT NULL,
-    SalarioBasePorHora MONEY NOT NULL
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , Nombre VARCHAR(255) NOT NULL
+  , SalarioPorHora DECIMAL(10, 2) NOT NULL
+  , Descripcion VARCHAR(500) NULL
 );
 
 CREATE TABLE Empleado (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Nombre VARCHAR(100) NOT NULL,
-    Apellido1 VARCHAR(100) NOT NULL,
-    Apellido2 VARCHAR(100),
-    DocumentoIdentidad VARCHAR(20) NOT NULL UNIQUE,
-    IdPuesto INT NOT NULL,
-    FechaIngreso DATE NOT NULL DEFAULT GETDATE(),
-    Activo BIT NOT NULL DEFAULT 1,
-    FOREIGN KEY (IdPuesto) REFERENCES Puesto(Id)
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , Nombre VARCHAR(255) NOT NULL
+  , Apellido VARCHAR(255) NOT NULL
+  , FechaIngreso DATE NOT NULL
+  , FechaNacimiento DATE NULL
+  , PuestoId INT NOT NULL
+  , Activo BIT NOT NULL DEFAULT 1
+  , CONSTRAINT FK_Empleado_Puesto FOREIGN KEY (PuestoId) REFERENCES Puesto(id)
 );
 
-CREATE TABLE CuentaBancaria (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdEmpleado INT NOT NULL,
-    NumeroCuenta VARCHAR(34) NOT NULL, -- Formato IBAN o similar
-    Banco VARCHAR(100) NOT NULL,
-    FOREIGN KEY (IdEmpleado) REFERENCES Empleado(Id)
-);
-
-
--- 3. TIEMPO
+-- Periodos de trabajo
 CREATE TABLE Mes (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Anio INT NOT NULL,
-    NumeroMes INT NOT NULL,
-    FechaInicio DATE NOT NULL,
-    FechaFin DATE NOT NULL,
-    UNIQUE(Anio, NumeroMes)
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , Numero INT NOT NULL CHECK (Numero BETWEEN 1 AND 12)
+  , Ano INT NOT NULL
+  , FechaInicio DATE NOT NULL
+  , FechaFin DATE NOT NULL
 );
 
 CREATE TABLE Semana (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdMes INT NOT NULL,
-    FechaInicio DATE NOT NULL,
-    FechaFin DATE NOT NULL,
-    FOREIGN KEY (IdMes) REFERENCES Mes(Id)
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , NumeroSemana INT NOT NULL CHECK (NumeroSemana BETWEEN 1 AND 53)
+  , Ano INT NOT NULL
+  , FechaInicio DATE NOT NULL
+  , FechaFin DATE NOT NULL
+  , MesId INT NULL
+  , CONSTRAINT FK_Semana_Mes FOREIGN KEY (MesId) REFERENCES Mes(id)
 );
 
 CREATE TABLE HorarioJornada (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdTipoJornada INT NOT NULL,
-    DiaSemana INT NOT NULL, -- 1: Lunes, ..., 7: Domingo
-    FOREIGN KEY (IdTipoJornada) REFERENCES TipoJornada(Id)
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , EmpleadoId INT NOT NULL
+  , DiaSemana INT NOT NULL CHECK (DiaSemana BETWEEN 1 AND 7)
+  , HoraEntrada TIME(0) NOT NULL
+  , HoraSalida TIME(0) NOT NULL
+  , EsJornadaNocturna BIT NOT NULL DEFAULT 0
+  , CONSTRAINT FK_HorarioJornada_Empleado FOREIGN KEY (EmpleadoId) REFERENCES Empleado(id)
 );
 
-CREATE TABLE EmpleadoJornadaSemana (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdEmpleado INT NOT NULL,
-    IdSemana INT NOT NULL,
-    IdTipoJornada INT NOT NULL,
-    FOREIGN KEY (IdEmpleado) REFERENCES Empleado(Id),
-    FOREIGN KEY (IdSemana) REFERENCES Semana(Id),
-    FOREIGN KEY (IdTipoJornada) REFERENCES TipoJornada(Id)
+CREATE TABLE AsistenciaAJornada (
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , EmpleadoId INT NOT NULL
+  , HorarioJornadaId INT NULL
+  , Fecha DATE NOT NULL
+  , HoraEntrada TIME(0) NULL
+  , HoraSalida TIME(0) NULL
+  , HorasTrabajadas DECIMAL(5,2) NULL
+  , Estado VARCHAR(50) NOT NULL DEFAULT 'Registrado'
+  , CONSTRAINT FK_AsistenciaAJornada_Empleado FOREIGN KEY (EmpleadoId) REFERENCES Empleado(id)
+  , CONSTRAINT FK_AsistenciaAJornada_Horario FOREIGN KEY (HorarioJornadaId) REFERENCES HorarioJornada(id)
 );
 
--- 4. ASISTENCIA
-CREATE TABLE Asistencia (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdEmpleado INT NOT NULL,
-    Fecha DATE NOT NULL,
-    HoraEntrada DATETIME,
-    HoraSalida DATETIME,
-    FOREIGN KEY (IdEmpleado) REFERENCES Empleado(Id)
+-- Pagos (Planillas)
+CREATE TABLE Planilla (
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , EmpleadoId INT NOT NULL
+  , FechaPago DATE NOT NULL
+  , IngresoBruto DECIMAL(10,2) NOT NULL
+  , TotalDeducciones DECIMAL(10,2) NOT NULL DEFAULT 0
+  , IngresoNeto DECIMAL(10,2) NOT NULL
+  , Observaciones VARCHAR(500) NULL
+  , CONSTRAINT FK_Planilla_Empleado FOREIGN KEY (EmpleadoId) REFERENCES Empleado(id)
 );
 
-CREATE TABLE MovimientoHoras (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdAsistencia INT NOT NULL,
-    IdTipoJornada INT NOT NULL,
-    HorasTrabajadas DECIMAL(5,2) NOT NULL,
-    EsExtra BIT NOT NULL DEFAULT 0,
-    FOREIGN KEY (IdAsistencia) REFERENCES Asistencia(Id),
-    FOREIGN KEY (IdTipoJornada) REFERENCES TipoJornada(Id)
-);
-
--- 5. DEDUCCIONES, FALTAN HERENCIAS
-CREATE TABLE DeduccionLey (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdTipoDeduccion INT NOT NULL,
-    Porcentaje DECIMAL(5,2) NOT NULL,
-    FOREIGN KEY (IdTipoDeduccion) REFERENCES TipoDeduccion(Id)
-);
-
--- 6. PLANILLA
 CREATE TABLE PlanillaSemanal (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdSemana INT NOT NULL,
-    FechaGeneracion DATETIME NOT NULL DEFAULT GETDATE(),
-    FOREIGN KEY (IdSemana) REFERENCES Semana(Id)
-);
-
-CREATE TABLE PlanillaSemanalEmpleado (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdPlanillaSemanal INT NOT NULL,
-    IdEmpleado INT NOT NULL,
-    SalarioBruto MONEY NOT NULL DEFAULT 0,
-    TotalDeducciones MONEY NOT NULL DEFAULT 0,
-    SalarioNeto MONEY NOT NULL DEFAULT 0,
-    FOREIGN KEY (IdPlanillaSemanal) REFERENCES PlanillaSemanal(Id),
-    FOREIGN KEY (IdEmpleado) REFERENCES Empleado(Id)
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , PlanillaId INT NOT NULL UNIQUE
+  , SemanaId INT NOT NULL
+  , CONSTRAINT FK_PlanillaSemanal_Planilla FOREIGN KEY (PlanillaId) REFERENCES Planilla(id)
+  , CONSTRAINT FK_PlanillaSemanal_Semana FOREIGN KEY (SemanaId) REFERENCES Semana(id)
 );
 
 CREATE TABLE PlanillaMensual (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdMes INT NOT NULL,
-    FechaGeneracion DATETIME NOT NULL DEFAULT GETDATE(),
-    FOREIGN KEY (IdMes) REFERENCES Mes(Id)
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , PlanillaId INT NOT NULL UNIQUE
+  , MesId INT NOT NULL
+  , CONSTRAINT FK_PlanillaMensual_Planilla FOREIGN KEY (PlanillaId) REFERENCES Planilla(id)
+  , CONSTRAINT FK_PlanillaMensual_Mes FOREIGN KEY (MesId) REFERENCES Mes(id)
 );
 
-CREATE TABLE PlanillaMensualEmpleado (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdPlanillaMensual INT NOT NULL,
-    IdEmpleado INT NOT NULL,
-    TotalSalarioBruto MONEY NOT NULL DEFAULT 0,
-    TotalDeducciones MONEY NOT NULL DEFAULT 0,
-    TotalSalarioNeto MONEY NOT NULL DEFAULT 0,
-    FOREIGN KEY (IdPlanillaMensual) REFERENCES PlanillaMensual(Id),
-    FOREIGN KEY (IdEmpleado) REFERENCES Empleado(Id)
+CREATE TABLE PlanillaAplicada (
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , PlanillaId INT NOT NULL
+  , EmpleadoId INT NOT NULL
+  , FechaAplicacion DATE NOT NULL DEFAULT (GETDATE())
+  , Estado VARCHAR(50) NOT NULL DEFAULT 'Aplicada'
+  , CONSTRAINT FK_PlanillaAplicada_Planilla FOREIGN KEY (PlanillaId) REFERENCES Planilla(id)
+  , CONSTRAINT FK_PlanillaAplicada_Empleado FOREIGN KEY (EmpleadoId) REFERENCES Empleado(id)
 );
 
-CREATE TABLE MovimientoPlanilla (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdPlanillaSemanalEmpleado INT NOT NULL,
-    IdTipoMovimiento INT NOT NULL,
-    Monto MONEY NOT NULL,
-    FOREIGN KEY (IdPlanillaSemanalEmpleado) REFERENCES PlanillaSemanalEmpleado(Id),
-    FOREIGN KEY (IdTipoMovimiento) REFERENCES TipoMovimiento(Id)
+-- Deducciones
+CREATE TABLE Deduccion (
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , Nombre VARCHAR(255) NOT NULL
+  , Descripcion VARCHAR(500) NULL
+  , Tipo VARCHAR(50) NOT NULL CHECK (Tipo IN ('Fija','Porcentual','Otro'))
 );
 
-CREATE TABLE Devengado (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdMovimientoPlanilla INT NOT NULL,
-    Descripcion VARCHAR(255),
-    FOREIGN KEY (IdMovimientoPlanilla) REFERENCES MovimientoPlanilla(Id)
+CREATE TABLE DeduccionFija (
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , DeduccionId INT NOT NULL UNIQUE
+  , Monto DECIMAL(10,2) NOT NULL CHECK (Monto >= 0)
+  , CONSTRAINT FK_DeduccionFija_Deduccion FOREIGN KEY (DeduccionId) REFERENCES Deduccion(id)
 );
 
-CREATE TABLE DeduccionEmpleadoMes (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    IdPlanillaMensualEmpleado INT NOT NULL,
-    IdEmpleadoDeduccion INT NOT NULL,
-    Monto MONEY NOT NULL,
-    FOREIGN KEY (IdPlanillaMensualEmpleado) REFERENCES PlanillaMensualEmpleado(Id),
-    FOREIGN KEY (IdEmpleadoDeduccion) REFERENCES EmpleadoDeduccion(Id)
+CREATE TABLE DeduccionPorcentual (
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , DeduccionId INT NOT NULL UNIQUE
+  , Porcentaje DECIMAL(5,2) NOT NULL CHECK (Porcentaje BETWEEN 0 AND 100)
+  , CONSTRAINT FK_DeduccionPorcentual_Deduccion FOREIGN KEY (DeduccionId) REFERENCES Deduccion(id)
 );
 
--- 7. LOGS
-
-CREATE TABLE Error (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Fecha DATETIME NOT NULL DEFAULT GETDATE(),
-    Username VARCHAR(50) NOT NULL,
-    Descripcion VARCHAR(MAX) NOT NULL
+CREATE TABLE DeduccionAplicada (
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , PlanillaId INT NOT NULL
+  , EmpleadoId INT NOT NULL
+  , DeduccionId INT NOT NULL
+  , Monto DECIMAL(10,2) NOT NULL CHECK (Monto >= 0)
+  , CONSTRAINT FK_DeduccionAplicada_Planilla FOREIGN KEY (PlanillaId) REFERENCES Planilla(id)
+  , CONSTRAINT FK_DeduccionAplicada_Empleado FOREIGN KEY (EmpleadoId) REFERENCES Empleado(id)
+  , CONSTRAINT FK_DeduccionAplicada_Deduccion FOREIGN KEY (DeduccionId) REFERENCES Deduccion(id)
 );
 
-CREATE TABLE DbError (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Fecha DATETIME NOT NULL DEFAULT GETDATE(),
-    Username VARCHAR(50) NOT NULL,
-    Descripcion VARCHAR(MAX) NOT NULL
+-- Otros para la conexion
+
+CREATE TABLE Usuario (
+    id INT PRIMARY KEY IDENTITY(1,1)
+    , Username VARCHAR(100) NOT NULL UNIQUE
+    , Contrasena VARCHAR(512) NOT NULL
+  , EmpleadoId INT NULL
+  , NombreUsuario VARCHAR(100) NOT NULL UNIQUE
+  , ContrasenaHash VARCHAR(512) NOT NULL
+  , Rol VARCHAR(50) NOT NULL DEFAULT 'Empleado'
+  , Activo BIT NOT NULL DEFAULT 1
+  , CONSTRAINT FK_Usuario_Empleado FOREIGN KEY (EmpleadoId) REFERENCES Empleado(id)
+);
+
+CREATE TABLE TipoEvento (
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , Nombre VARCHAR(100) NOT NULL
+  , Descripcion VARCHAR(500) NULL
 );
 
 CREATE TABLE BitacoraEvento (
-    Id INT PRIMARY KEY IDENTITY(1,1),
-    Fecha DATETIME NOT NULL DEFAULT GETDATE(),
-    Username VARCHAR(50) NOT NULL,
-    IdTipoEvento INT NOT NULL,
-    Descripcion VARCHAR(MAX) NOT NULL,
-    ValorAnterior VARCHAR(MAX),
-    ValorNuevo VARCHAR(MAX),
-    FOREIGN KEY (IdTipoEvento) REFERENCES TipoEvento(Id)
+    id INT PRIMARY KEY IDENTITY(1,1)
+  , UsuarioId INT NOT NULL
+  , TipoEventoId INT NOT NULL
+  , FechaHora DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+  , Descripcion VARCHAR(1000) NULL
+  , CONSTRAINT FK_BitacoraEvento_Usuario FOREIGN KEY (UsuarioId) REFERENCES Usuario(id)
+  , CONSTRAINT FK_BitacoraEvento_TipoEvento FOREIGN KEY (TipoEventoId) REFERENCES TipoEvento(id)
 );
+
+
+CREATE TABLE dbo.Error (
+    id              INTEGER PRIMARY KEY IDENTITY(1,1)
+    , Codigo          INTEGER NOT NULL
+    , Descripcion     NVARCHAR(255) NOT NULL
+)
+
+CREATE TABLE dbo.DBError (
+    id INTEGER PRIMARY KEY IDENTITY(1,1)
+    , Username NVARCHAR(100) NOT NULL
+    , [Number] INTEGER NOT NULL
+    , [State] INTEGER NOT NULL
+    , Severity INTEGER NOT NULL
+    , [Line] INTEGER NOT NULL
+    , [Procedure] NVARCHAR(200) NOT NULL
+    , [Message] NVARCHAR(MAX) NOT NULL
+    , [DateTime] DATETIME NOT NULL
+)
