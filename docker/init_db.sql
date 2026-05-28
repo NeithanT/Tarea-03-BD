@@ -1,4 +1,35 @@
--- El esquema para la Tarea 03 de Bases
+-- El esquema para la Tarea 03 de BasesTipoJornada
+
+-- ===== Esquema Del Profesor =====
+-- Feriados
+-- Puesto
+-- Empleado
+-- Semana
+-- Mes
+-- HorarioJornada
+-- PlanillaMensual
+-- PlanillaSemanal
+-- MovPlanilla
+-- TipoMov
+-- Asistencia
+-- MovHoras
+-- Devengado
+-- DeducciónXLey
+-- DeducciónMontoFijo
+-- Usuario
+-- UsuarioEmpleado
+-- DeduccionMensual
+-- TipoEvento
+-- BitacoraEvento
+-- TipoDeducción
+-- DeduccionNoObligatoria
+-- EmpXTipoDed
+-- UsuarioAdministrador
+-- DeducciónPorcentual
+-- EXTDMontoFijo
+-- EXTDPorcentual
+
+
 -- ===== Plantilla Obrera =====
 -- Listado de tablas:
 -- Puesto,
