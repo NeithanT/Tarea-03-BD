@@ -4,7 +4,7 @@ use crate::services::auth::AuthService;
 use crate::AppState;
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/api/login", post(login))
+    Router::new().route("/auth/login", post(login))
 }
 
 async fn login(
