@@ -5,11 +5,13 @@ edition = "2024"
 
 [dependencies]
 axum = "0.7"
+axum-server = "0.8" 
 tokio = { version = "1.0", features = ["full"] }
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 
 # Database
-tiberius = { version = "0.12.3", features = ["sql-browser-tokio"] }
+sqlx-core = { version = "0.7.4", features = ["_rt-tokio"] }
+welds-sqlx-mssql = "1.7.0"
 
 # Utilities
 serde = { version = "1.0", features = ["derive"] }

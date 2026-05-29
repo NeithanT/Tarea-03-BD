@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+pub mod user;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Puesto {
     pub id: i32,

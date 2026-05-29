@@ -54,6 +54,10 @@
 -- DBError
 
 
+CREATE DATABASE PlanillaObrera;
+GO
+
+USE PlanillaObrera;
 -- Todo inicia desde los empleados
 CREATE TABLE Puesto (
   id INT PRIMARY KEY IDENTITY(1,1)
