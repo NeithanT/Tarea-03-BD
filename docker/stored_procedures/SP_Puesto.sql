@@ -1,3 +1,6 @@
+USE Tarea03;
+GO
+
 CREATE PROCEDURE dbo.SP_Puesto_Insertar
     @inNombre VARCHAR(255)
     , @inSalarioPorHora DECIMAL(10, 2)

@@ -1,3 +1,6 @@
+USE Tarea03;
+GO
+
 CREATE PROCEDURE dbo.SP_EmpXTipoDed_Asociar
     @inEmpleadoId INT
     , @inTipoDeduccionId INT

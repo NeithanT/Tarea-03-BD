@@ -1,3 +1,6 @@
+USE Tarea03;
+GO
+
 CREATE PROCEDURE dbo.SP_Empleado_Insertar
     @inCedula VARCHAR(20)
     , @inNombre VARCHAR(255)

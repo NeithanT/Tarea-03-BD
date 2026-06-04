@@ -1,3 +1,9 @@
+CREATE DATABASE Tarea03;
+GO
+
+USE Tarea03;
+GO
+
 -- El esquema para la Tarea 03 de Bases de Datos
 
 -- Feriados

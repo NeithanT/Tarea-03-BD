@@ -1,3 +1,6 @@
+USE Tarea03;
+GO
+
 CREATE PROCEDURE dbo.SP_Usuario_Insertar
     @inUsername VARCHAR(100)
     , @inContrasena VARCHAR(512)
