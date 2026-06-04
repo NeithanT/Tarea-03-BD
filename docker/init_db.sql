@@ -1,3 +1,65 @@
+-- El esquema para la Tarea 03 de Bases de Datos
+
+-- Feriados
+-- Puesto
+-- Empleado
+-- Semana
+-- Mes
+-- HorarioJornada
+-- PlanillaMensual
+-- PlanillaSemanal
+-- MovPlanilla
+-- TipoMov
+-- Asistencia
+-- MovHoras
+-- Devengado
+-- DeduccionXLey
+-- DeduccionMontoFijo
+-- Usuario
+-- UsuarioEmpleado
+-- DeduccionMensual
+-- TipoEvento
+-- BitacoraEvento
+-- TipoDeduccion
+-- DeduccionNoObligatoria
+-- EmpXTipoDed
+-- UsuarioAdministrador
+-- DeduccionPorcentual
+-- EXTDMontoFijo
+-- EXTDPorcentual
+
+-- ===== Plantilla Obrera =====
+-- Listado de tablas:
+-- TipoJornada,
+-- TipoMovimiento,
+-- TipoDeduccion,
+-- TipoUsuario,
+-- TipoEvento,
+-- Feriado,
+-- Puesto,
+-- Empleado,
+-- Mes,
+-- Semana,
+-- HorarioJornada,
+-- AsistenciaAJornada,
+-- Planilla,
+-- PlanillaSemanal,
+-- PlanillaMensual,
+-- PlanillaAplicada,
+-- MovPlanilla,
+-- Deduccion,
+-- DeduccionFija,
+-- DeduccionPorcentual,
+-- DeduccionAplicada,
+-- EmpXTipoDed,
+-- Usuario,
+-- UsuarioEmpleado,
+-- BitacoraEvento,
+-- Error,
+-- DBError
+
+-- Catalogos
+
 CREATE TABLE dbo.TipoJornada (
   id INT PRIMARY KEY
   , Nombre VARCHAR(50) NOT NULL
@@ -38,6 +100,8 @@ CREATE TABLE dbo.Feriado (
   , Fecha DATE NOT NULL
 );
 
+-- Todo inicia desde los empleados
+
 CREATE TABLE dbo.Puesto (
   id INT PRIMARY KEY IDENTITY(1,1)
   , Nombre VARCHAR(255) NOT NULL
@@ -57,6 +121,8 @@ CREATE TABLE dbo.Empleado (
   , CONSTRAINT FK_Empleado_Puesto FOREIGN KEY (PuestoId) REFERENCES dbo.Puesto(id)
 );
 
+-- Periodos de trabajo
+
 CREATE TABLE dbo.Mes (
   id INT PRIMARY KEY IDENTITY(1,1)
   , Numero INT NOT NULL CHECK (Numero BETWEEN 1 AND 12)
@@ -74,6 +140,8 @@ CREATE TABLE dbo.Semana (
   , MesId INT NULL
   , CONSTRAINT FK_Semana_Mes FOREIGN KEY (MesId) REFERENCES dbo.Mes(id)
 );
+
+-- Horarios y asistencia
 
 CREATE TABLE dbo.HorarioJornada (
   id INT PRIMARY KEY IDENTITY(1,1)
@@ -100,6 +168,8 @@ CREATE TABLE dbo.AsistenciaAJornada (
   , CONSTRAINT FK_AsistenciaAJornada_Empleado FOREIGN KEY (EmpleadoId) REFERENCES dbo.Empleado(id)
   , CONSTRAINT FK_AsistenciaAJornada_Horario FOREIGN KEY (HorarioJornadaId) REFERENCES dbo.HorarioJornada(id)
 );
+
+-- Pagos (Planillas)
 
 CREATE TABLE dbo.Planilla (
   id INT PRIMARY KEY IDENTITY(1,1)
@@ -138,6 +208,8 @@ CREATE TABLE dbo.PlanillaAplicada (
   , CONSTRAINT FK_PlanillaAplicada_Empleado FOREIGN KEY (EmpleadoId) REFERENCES dbo.Empleado(id)
 );
 
+-- Movimientos de planilla
+
 CREATE TABLE dbo.MovPlanilla (
   id INT PRIMARY KEY IDENTITY(1,1)
   , PlanillaSemanalId INT NOT NULL
@@ -150,6 +222,8 @@ CREATE TABLE dbo.MovPlanilla (
   , CONSTRAINT FK_MovPlanilla_Asistencia FOREIGN KEY (AsistenciaId) REFERENCES dbo.AsistenciaAJornada(id)
   , CONSTRAINT FK_MovPlanilla_TipoMovimiento FOREIGN KEY (TipoMovimientoId) REFERENCES dbo.TipoMovimiento(id)
 );
+
+-- Deducciones
 
 CREATE TABLE dbo.Deduccion (
   id INT PRIMARY KEY IDENTITY(1,1)
@@ -196,6 +270,8 @@ CREATE TABLE dbo.EmpXTipoDed (
   , CONSTRAINT UQ_EmpXTipoDed UNIQUE (EmpleadoId, TipoDeduccionId, FechaInicio)
 );
 
+-- Usuarios
+
 CREATE TABLE dbo.Usuario (
   id INT PRIMARY KEY IDENTITY(1,1)
   , Username VARCHAR(100) NOT NULL UNIQUE
@@ -215,6 +291,8 @@ CREATE TABLE dbo.UsuarioEmpleado (
   , CONSTRAINT FK_UsuarioEmpleado_Empleado FOREIGN KEY (EmpleadoId) REFERENCES dbo.Empleado(id)
 );
 
+-- Bitacora de eventos
+
 CREATE TABLE dbo.BitacoraEvento (
   id INT PRIMARY KEY IDENTITY(1,1)
   , UsuarioId INT NOT NULL
@@ -225,6 +303,8 @@ CREATE TABLE dbo.BitacoraEvento (
   , CONSTRAINT FK_BitacoraEvento_Usuario FOREIGN KEY (UsuarioId) REFERENCES dbo.Usuario(id)
   , CONSTRAINT FK_BitacoraEvento_TipoEvento FOREIGN KEY (TipoEventoId) REFERENCES dbo.TipoEvento(id)
 );
+
+-- Manejo de errores
 
 CREATE TABLE dbo.Error (
   id INT PRIMARY KEY IDENTITY(1,1)
