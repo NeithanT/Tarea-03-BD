@@ -9,10 +9,10 @@ CREATE PROCEDURE dbo.SP_Empleado_Insertar
     , @outResultCode INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
-    SET @outResultCode = 0
-    SET @outId = 0
+    SET @outResultCode = 0;
+    SET @outId = 0;
 
     BEGIN TRY
 
@@ -22,8 +22,8 @@ BEGIN
             WHERE (p.id = @inPuestoId)
         )
         BEGIN
-            SET @outResultCode = 52001
-            RETURN
+            SET @outResultCode = 52001;
+            RETURN;
         END
 
         IF EXISTS (
@@ -32,11 +32,11 @@ BEGIN
             WHERE (e.Cedula = @inCedula)
         )
         BEGIN
-            SET @outResultCode = 52002
-            RETURN
+            SET @outResultCode = 52002;
+            RETURN;
         END
 
-        BEGIN TRANSACTION
+        BEGIN TRANSACTION;
 
             INSERT INTO dbo.Empleado (
                 Cedula
@@ -55,21 +55,21 @@ BEGIN
                 , @inFechaNacimiento
                 , @inPuestoId
                 , 1
-            )
+            );
 
-            SET @outId = SCOPE_IDENTITY()
+            SET @outId = SCOPE_IDENTITY();
 
-        COMMIT TRANSACTION
+        COMMIT TRANSACTION;
 
     END TRY
     BEGIN CATCH
 
         IF (XACT_STATE() <> 0)
         BEGIN
-            ROLLBACK TRANSACTION
+            ROLLBACK TRANSACTION;
         END
 
-        SET @outResultCode = 52099
+        SET @outResultCode = 52099;
 
         INSERT INTO dbo.DBError (
             Username
@@ -90,7 +90,7 @@ BEGIN
             , ERROR_PROCEDURE()
             , ERROR_MESSAGE()
             , GETDATE()
-        )
+        );
 
     END CATCH
 END
@@ -101,9 +101,9 @@ CREATE PROCEDURE dbo.SP_Empleado_ObtenerPorId
     , @outResultCode INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
-    SET @outResultCode = 0
+    SET @outResultCode = 0;
 
     BEGIN TRY
 
@@ -120,12 +120,12 @@ BEGIN
             , e.Activo
         FROM dbo.Empleado e
         INNER JOIN dbo.Puesto p ON (p.id = e.PuestoId)
-        WHERE (e.id = @inId)
+        WHERE (e.id = @inId);
 
     END TRY
     BEGIN CATCH
 
-        SET @outResultCode = 52099
+        SET @outResultCode = 52099;
 
         INSERT INTO dbo.DBError (
             Username
@@ -146,7 +146,7 @@ BEGIN
             , ERROR_PROCEDURE()
             , ERROR_MESSAGE()
             , GETDATE()
-        )
+        );
 
     END CATCH
 END
@@ -156,9 +156,9 @@ CREATE PROCEDURE dbo.SP_Empleado_Listar
     @outResultCode INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
-    SET @outResultCode = 0
+    SET @outResultCode = 0;
 
     BEGIN TRY
 
@@ -173,12 +173,12 @@ BEGIN
         FROM dbo.Empleado e
         INNER JOIN dbo.Puesto p ON (p.id = e.PuestoId)
         WHERE (e.Activo = 1)
-        ORDER BY e.Nombre, e.Apellido
+        ORDER BY e.Nombre, e.Apellido;
 
     END TRY
     BEGIN CATCH
 
-        SET @outResultCode = 52099
+        SET @outResultCode = 52099;
 
         INSERT INTO dbo.DBError (
             Username
@@ -199,7 +199,7 @@ BEGIN
             , ERROR_PROCEDURE()
             , ERROR_MESSAGE()
             , GETDATE()
-        )
+        );
 
     END CATCH
 END
@@ -210,9 +210,9 @@ CREATE PROCEDURE dbo.SP_Empleado_ListarConFiltro
     , @outResultCode INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
-    SET @outResultCode = 0
+    SET @outResultCode = 0;
 
     BEGIN TRY
 
@@ -228,12 +228,12 @@ BEGIN
         INNER JOIN dbo.Puesto p ON (p.id = e.PuestoId)
         WHERE (e.Activo = 1)
         AND ((e.Nombre + ' ' + e.Apellido) LIKE ('%' + @inFiltro + '%'))
-        ORDER BY e.Nombre, e.Apellido
+        ORDER BY e.Nombre, e.Apellido;
 
     END TRY
     BEGIN CATCH
 
-        SET @outResultCode = 52099
+        SET @outResultCode = 52099;
 
         INSERT INTO dbo.DBError (
             Username
@@ -254,7 +254,7 @@ BEGIN
             , ERROR_PROCEDURE()
             , ERROR_MESSAGE()
             , GETDATE()
-        )
+        );
 
     END CATCH
 END
@@ -271,9 +271,9 @@ CREATE PROCEDURE dbo.SP_Empleado_Actualizar
     , @outResultCode INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
-    SET @outResultCode = 0
+    SET @outResultCode = 0;
 
     BEGIN TRY
 
@@ -283,8 +283,8 @@ BEGIN
             WHERE (e.id = @inId)
         )
         BEGIN
-            SET @outResultCode = 52001
-            RETURN
+            SET @outResultCode = 52001;
+            RETURN;
         END
 
         IF NOT EXISTS (
@@ -293,11 +293,11 @@ BEGIN
             WHERE (p.id = @inPuestoId)
         )
         BEGIN
-            SET @outResultCode = 52003
-            RETURN
+            SET @outResultCode = 52003;
+            RETURN;
         END
 
-        BEGIN TRANSACTION
+        BEGIN TRANSACTION;
 
             UPDATE dbo.Empleado
             SET Cedula = @inCedula
@@ -306,19 +306,19 @@ BEGIN
                 , FechaIngreso = @inFechaIngreso
                 , FechaNacimiento = @inFechaNacimiento
                 , PuestoId = @inPuestoId
-            WHERE (id = @inId)
+            WHERE (id = @inId);
 
-        COMMIT TRANSACTION
+        COMMIT TRANSACTION;
 
     END TRY
     BEGIN CATCH
 
         IF (XACT_STATE() <> 0)
         BEGIN
-            ROLLBACK TRANSACTION
+            ROLLBACK TRANSACTION;
         END
 
-        SET @outResultCode = 52099
+        SET @outResultCode = 52099;
 
         INSERT INTO dbo.DBError (
             Username
@@ -339,7 +339,7 @@ BEGIN
             , ERROR_PROCEDURE()
             , ERROR_MESSAGE()
             , GETDATE()
-        )
+        );
 
     END CATCH
 END
@@ -350,9 +350,9 @@ CREATE PROCEDURE dbo.SP_Empleado_Eliminar
     , @outResultCode INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
-    SET @outResultCode = 0
+    SET @outResultCode = 0;
 
     BEGIN TRY
 
@@ -363,27 +363,27 @@ BEGIN
             AND (e.Activo = 1)
         )
         BEGIN
-            SET @outResultCode = 52001
-            RETURN
+            SET @outResultCode = 52001;
+            RETURN;
         END
 
-        BEGIN TRANSACTION
+        BEGIN TRANSACTION;
 
             UPDATE dbo.Empleado
             SET Activo = 0
-            WHERE (id = @inId)
+            WHERE (id = @inId);
 
-        COMMIT TRANSACTION
+        COMMIT TRANSACTION;
 
     END TRY
     BEGIN CATCH
 
         IF (XACT_STATE() <> 0)
         BEGIN
-            ROLLBACK TRANSACTION
+            ROLLBACK TRANSACTION;
         END
 
-        SET @outResultCode = 52099
+        SET @outResultCode = 52099;
 
         INSERT INTO dbo.DBError (
             Username
@@ -404,7 +404,7 @@ BEGIN
             , ERROR_PROCEDURE()
             , ERROR_MESSAGE()
             , GETDATE()
-        )
+        );
 
     END CATCH
 END

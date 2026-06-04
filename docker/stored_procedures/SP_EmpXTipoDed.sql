@@ -7,10 +7,10 @@ CREATE PROCEDURE dbo.SP_EmpXTipoDed_Asociar
     , @outResultCode INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
-    SET @outResultCode = 0
-    SET @outId = 0
+    SET @outResultCode = 0;
+    SET @outId = 0;
 
     BEGIN TRY
 
@@ -21,8 +21,8 @@ BEGIN
             AND (e.Activo = 1)
         )
         BEGIN
-            SET @outResultCode = 54001
-            RETURN
+            SET @outResultCode = 54001;
+            RETURN;
         END
 
         IF NOT EXISTS (
@@ -31,8 +31,8 @@ BEGIN
             WHERE (td.id = @inTipoDeduccionId)
         )
         BEGIN
-            SET @outResultCode = 54002
-            RETURN
+            SET @outResultCode = 54002;
+            RETURN;
         END
 
         IF EXISTS (
@@ -43,11 +43,11 @@ BEGIN
             AND (etd.Activo = 1)
         )
         BEGIN
-            SET @outResultCode = 54003
-            RETURN
+            SET @outResultCode = 54003;
+            RETURN;
         END
 
-        BEGIN TRANSACTION
+        BEGIN TRANSACTION;
 
             INSERT INTO dbo.EmpXTipoDed (
                 EmpleadoId
@@ -64,21 +64,21 @@ BEGIN
                 , @inFechaInicio
                 , NULL
                 , 1
-            )
+            );
 
-            SET @outId = SCOPE_IDENTITY()
+            SET @outId = SCOPE_IDENTITY();
 
-        COMMIT TRANSACTION
+        COMMIT TRANSACTION;
 
     END TRY
     BEGIN CATCH
 
         IF (XACT_STATE() <> 0)
         BEGIN
-            ROLLBACK TRANSACTION
+            ROLLBACK TRANSACTION;
         END
 
-        SET @outResultCode = 54099
+        SET @outResultCode = 54099;
 
         INSERT INTO dbo.DBError (
             Username
@@ -99,7 +99,7 @@ BEGIN
             , ERROR_PROCEDURE()
             , ERROR_MESSAGE()
             , GETDATE()
-        )
+        );
 
     END CATCH
 END
@@ -112,9 +112,9 @@ CREATE PROCEDURE dbo.SP_EmpXTipoDed_Desasociar
     , @outResultCode INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
-    SET @outResultCode = 0
+    SET @outResultCode = 0;
 
     BEGIN TRY
 
@@ -126,30 +126,30 @@ BEGIN
             AND (etd.Activo = 1)
         )
         BEGIN
-            SET @outResultCode = 54001
-            RETURN
+            SET @outResultCode = 54001;
+            RETURN;
         END
 
-        BEGIN TRANSACTION
+        BEGIN TRANSACTION;
 
             UPDATE dbo.EmpXTipoDed
             SET Activo = 0
                 , FechaFin = @inFechaFin
             WHERE (EmpleadoId = @inEmpleadoId)
             AND (TipoDeduccionId = @inTipoDeduccionId)
-            AND (Activo = 1)
+            AND (Activo = 1);
 
-        COMMIT TRANSACTION
+        COMMIT TRANSACTION;
 
     END TRY
     BEGIN CATCH
 
         IF (XACT_STATE() <> 0)
         BEGIN
-            ROLLBACK TRANSACTION
+            ROLLBACK TRANSACTION;
         END
 
-        SET @outResultCode = 54099
+        SET @outResultCode = 54099;
 
         INSERT INTO dbo.DBError (
             Username
@@ -170,7 +170,7 @@ BEGIN
             , ERROR_PROCEDURE()
             , ERROR_MESSAGE()
             , GETDATE()
-        )
+        );
 
     END CATCH
 END
@@ -181,9 +181,9 @@ CREATE PROCEDURE dbo.SP_EmpXTipoDed_ListarPorEmpleado
     , @outResultCode INT OUTPUT
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
-    SET @outResultCode = 0
+    SET @outResultCode = 0;
 
     BEGIN TRY
 
@@ -201,12 +201,12 @@ BEGIN
         FROM dbo.EmpXTipoDed etd
         INNER JOIN dbo.TipoDeduccion td ON (td.id = etd.TipoDeduccionId)
         WHERE (etd.EmpleadoId = @inEmpleadoId)
-        ORDER BY td.Nombre
+        ORDER BY td.Nombre;
 
     END TRY
     BEGIN CATCH
 
-        SET @outResultCode = 54099
+        SET @outResultCode = 54099;
 
         INSERT INTO dbo.DBError (
             Username
@@ -227,7 +227,7 @@ BEGIN
             , ERROR_PROCEDURE()
             , ERROR_MESSAGE()
             , GETDATE()
-        )
+        );
 
     END CATCH
 END
