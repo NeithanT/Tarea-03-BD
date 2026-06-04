@@ -1,3 +1,6 @@
+USE Tarea03;
+GO
+
 CREATE TRIGGER dbo.TR_Empleado_AsociarDeduccionesObligatorias
 ON dbo.Empleado
 AFTER INSERT
