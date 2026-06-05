@@ -5,7 +5,7 @@ SET NOCOUNT ON;
 GO
 
 
-CREATE PROCEDURE dbo.spLoadTiposJornada
+CREATE PROCEDURE dbo.spCargarDatosXML
     @inXml XML
 AS
 BEGIN
@@ -14,6 +14,7 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
+        -- TiposJornada
         INSERT INTO dbo.TipoJornada (
             id
             , Nombre
@@ -27,50 +28,7 @@ BEGIN
             , TRY_CAST(JornadaRow.value('@HoraFin', 'VARCHAR(20)') AS TIME(0))
         FROM @inXml.nodes('/Datos/TiposJornada/TipoJornada') AS T(JornadaRow);
 
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF (XACT_STATE() <> 0)
-        BEGIN
-            ROLLBACK TRANSACTION;
-        END
-
-        INSERT INTO dbo.DBError (
-            Username
-            , [Number]
-            , [State]
-            , Severity
-            , [Line]
-            , [Procedure]
-            , [Message]
-            , [DateTime]
-        )
-        VALUES (
-            SUSER_SNAME()
-            , ERROR_NUMBER()
-            , ERROR_STATE()
-            , ERROR_SEVERITY()
-            , ERROR_LINE()
-            , ERROR_PROCEDURE()
-            , ERROR_MESSAGE()
-            , GETDATE()
-        );
-
-        THROW;
-    END CATCH
-END;
-GO
-
-
-CREATE PROCEDURE dbo.spLoadPuestos
-    @inXml XML
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    BEGIN TRY
-        BEGIN TRANSACTION;
-
+        -- Puestos
         INSERT INTO dbo.Puesto (
             Nombre
             , SalarioPorHora
@@ -80,50 +38,7 @@ BEGIN
             , TRY_CAST(PuestoRow.value('@SalarioXHora', 'NVARCHAR(50)') AS DECIMAL(10, 2))
         FROM @inXml.nodes('/Datos/Puestos/Puesto') AS T(PuestoRow);
 
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF (XACT_STATE() <> 0)
-        BEGIN
-            ROLLBACK TRANSACTION;
-        END
-
-        INSERT INTO dbo.DBError (
-            Username
-            , [Number]
-            , [State]
-            , Severity
-            , [Line]
-            , [Procedure]
-            , [Message]
-            , [DateTime]
-        )
-        VALUES (
-            SUSER_SNAME()
-            , ERROR_NUMBER()
-            , ERROR_STATE()
-            , ERROR_SEVERITY()
-            , ERROR_LINE()
-            , ERROR_PROCEDURE()
-            , ERROR_MESSAGE()
-            , GETDATE()
-        );
-
-        THROW;
-    END CATCH
-END;
-GO
-
-
-CREATE PROCEDURE dbo.spLoadFeriados
-    @inXml XML
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    BEGIN TRY
-        BEGIN TRANSACTION;
-
+        -- Feriados
         INSERT INTO dbo.Feriado (
             id
             , Nombre
@@ -135,50 +50,7 @@ BEGIN
             , TRY_CAST(FeriadoRow.value('@Fecha', 'NVARCHAR(20)') AS DATE)
         FROM @inXml.nodes('/Datos/Feriados/Feriado') AS T(FeriadoRow);
 
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF (XACT_STATE() <> 0)
-        BEGIN
-            ROLLBACK TRANSACTION;
-        END
-
-        INSERT INTO dbo.DBError (
-            Username
-            , [Number]
-            , [State]
-            , Severity
-            , [Line]
-            , [Procedure]
-            , [Message]
-            , [DateTime]
-        )
-        VALUES (
-            SUSER_SNAME()
-            , ERROR_NUMBER()
-            , ERROR_STATE()
-            , ERROR_SEVERITY()
-            , ERROR_LINE()
-            , ERROR_PROCEDURE()
-            , ERROR_MESSAGE()
-            , GETDATE()
-        );
-
-        THROW;
-    END CATCH
-END;
-GO
-
-
-CREATE PROCEDURE dbo.spLoadTiposEvento
-    @inXml XML
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    BEGIN TRY
-        BEGIN TRANSACTION;
-
+        -- TiposEvento
         INSERT INTO dbo.TipoEvento (
             id
             , Nombre
@@ -188,50 +60,7 @@ BEGIN
             , TipoEventoRow.value('@Nombre', 'VARCHAR(100)')
         FROM @inXml.nodes('/Datos/TiposEvento/TipoEvento') AS T(TipoEventoRow);
 
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF (XACT_STATE() <> 0)
-        BEGIN
-            ROLLBACK TRANSACTION;
-        END
-
-        INSERT INTO dbo.DBError (
-            Username
-            , [Number]
-            , [State]
-            , Severity
-            , [Line]
-            , [Procedure]
-            , [Message]
-            , [DateTime]
-        )
-        VALUES (
-            SUSER_SNAME()
-            , ERROR_NUMBER()
-            , ERROR_STATE()
-            , ERROR_SEVERITY()
-            , ERROR_LINE()
-            , ERROR_PROCEDURE()
-            , ERROR_MESSAGE()
-            , GETDATE()
-        );
-
-        THROW;
-    END CATCH
-END;
-GO
-
-
-CREATE PROCEDURE dbo.spLoadTiposMovimiento
-    @inXml XML
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    BEGIN TRY
-        BEGIN TRANSACTION;
-
+        -- TiposMovimiento
         INSERT INTO dbo.TipoMovimiento (
             id
             , Nombre
@@ -247,50 +76,7 @@ BEGIN
               END
         FROM @inXml.nodes('/Datos/TiposMovimiento/TipoMovimiento') AS T(TipoMovRow);
 
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF (XACT_STATE() <> 0)
-        BEGIN
-            ROLLBACK TRANSACTION;
-        END
-
-        INSERT INTO dbo.DBError (
-            Username
-            , [Number]
-            , [State]
-            , Severity
-            , [Line]
-            , [Procedure]
-            , [Message]
-            , [DateTime]
-        )
-        VALUES (
-            SUSER_SNAME()
-            , ERROR_NUMBER()
-            , ERROR_STATE()
-            , ERROR_SEVERITY()
-            , ERROR_LINE()
-            , ERROR_PROCEDURE()
-            , ERROR_MESSAGE()
-            , GETDATE()
-        );
-
-        THROW;
-    END CATCH
-END;
-GO
-
-
-CREATE PROCEDURE dbo.spLoadTiposDeduccion
-    @inXml XML
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    BEGIN TRY
-        BEGIN TRANSACTION;
-
+        -- TiposDeduccion (depende de TipoMovimiento)
         INSERT INTO dbo.TipoDeduccion (
             id
             , Nombre
@@ -312,51 +98,8 @@ BEGIN
               )
         FROM @inXml.nodes('/Datos/TiposDeduccion/TipoDeduccion') AS T(TipoDeducRow);
 
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF (XACT_STATE() <> 0)
-        BEGIN
-            ROLLBACK TRANSACTION;
-        END
-
-        INSERT INTO dbo.DBError (
-            Username
-            , [Number]
-            , [State]
-            , Severity
-            , [Line]
-            , [Procedure]
-            , [Message]
-            , [DateTime]
-        )
-        VALUES (
-            SUSER_SNAME()
-            , ERROR_NUMBER()
-            , ERROR_STATE()
-            , ERROR_SEVERITY()
-            , ERROR_LINE()
-            , ERROR_PROCEDURE()
-            , ERROR_MESSAGE()
-            , GETDATE()
-        );
-
-        THROW;
-    END CATCH
-END;
-GO
-
-
-CREATE PROCEDURE dbo.spLoadTiposUsuario
-    @inXml XML
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    BEGIN TRY
+        -- TiposUsuario (con IDENTITY_INSERT)
         SET IDENTITY_INSERT dbo.TipoUsuario ON;
-
-        BEGIN TRANSACTION;
 
         INSERT INTO dbo.TipoUsuario (
             id
@@ -371,55 +114,10 @@ BEGIN
               END
         FROM @inXml.nodes('/Datos/Usuarios/Usuario') AS T(UsuarioRow);
 
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF (XACT_STATE() <> 0)
-        BEGIN
-            ROLLBACK TRANSACTION;
-        END
-
         SET IDENTITY_INSERT dbo.TipoUsuario OFF;
 
-        INSERT INTO dbo.DBError (
-            Username
-            , [Number]
-            , [State]
-            , Severity
-            , [Line]
-            , [Procedure]
-            , [Message]
-            , [DateTime]
-        )
-        VALUES (
-            SUSER_SNAME()
-            , ERROR_NUMBER()
-            , ERROR_STATE()
-            , ERROR_SEVERITY()
-            , ERROR_LINE()
-            , ERROR_PROCEDURE()
-            , ERROR_MESSAGE()
-            , GETDATE()
-        );
-
-        THROW;
-    END CATCH
-
-    SET IDENTITY_INSERT dbo.TipoUsuario OFF;
-END;
-GO
-
-
-CREATE PROCEDURE dbo.spLoadUsuarios
-    @inXml XML
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    BEGIN TRY
+        -- Usuarios (con IDENTITY_INSERT, depende de TipoUsuario)
         SET IDENTITY_INSERT dbo.Usuario ON;
-
-        BEGIN TRANSACTION;
 
         INSERT INTO dbo.Usuario (
             id
@@ -440,54 +138,9 @@ BEGIN
             , 1
         FROM @inXml.nodes('/Datos/Usuarios/Usuario') AS T(UsuarioRow);
 
-        COMMIT TRANSACTION;
-    END TRY
-    BEGIN CATCH
-        IF (XACT_STATE() <> 0)
-        BEGIN
-            ROLLBACK TRANSACTION;
-        END
-
         SET IDENTITY_INSERT dbo.Usuario OFF;
 
-        INSERT INTO dbo.DBError (
-            Username
-            , [Number]
-            , [State]
-            , Severity
-            , [Line]
-            , [Procedure]
-            , [Message]
-            , [DateTime]
-        )
-        VALUES (
-            SUSER_SNAME()
-            , ERROR_NUMBER()
-            , ERROR_STATE()
-            , ERROR_SEVERITY()
-            , ERROR_LINE()
-            , ERROR_PROCEDURE()
-            , ERROR_MESSAGE()
-            , GETDATE()
-        );
-
-        THROW;
-    END CATCH
-
-    SET IDENTITY_INSERT dbo.Usuario OFF;
-END;
-GO
-
-
-CREATE PROCEDURE dbo.spLoadErrores
-    @inXml XML
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    BEGIN TRY
-        BEGIN TRANSACTION;
-
+        -- Errores
         INSERT INTO dbo.Error (
             Codigo
             , Descripcion
@@ -504,6 +157,9 @@ BEGIN
         BEGIN
             ROLLBACK TRANSACTION;
         END
+
+        SET IDENTITY_INSERT dbo.TipoUsuario OFF;
+        SET IDENTITY_INSERT dbo.Usuario OFF;
 
         INSERT INTO dbo.DBError (
             Username
@@ -622,13 +278,5 @@ DECLARE @myXml XML = '<Datos>
 
 </Datos>';
 
-EXEC dbo.spLoadTiposJornada   @inXml = @myXml;
-EXEC dbo.spLoadPuestos        @inXml = @myXml;
-EXEC dbo.spLoadFeriados       @inXml = @myXml;
-EXEC dbo.spLoadTiposEvento    @inXml = @myXml;
-EXEC dbo.spLoadTiposMovimiento @inXml = @myXml;
-EXEC dbo.spLoadTiposDeduccion @inXml = @myXml;
-EXEC dbo.spLoadTiposUsuario   @inXml = @myXml;
-EXEC dbo.spLoadUsuarios       @inXml = @myXml;
-EXEC dbo.spLoadErrores        @inXml = @myXml;
+EXEC dbo.spCargarDatosXML @inXml = @myXml;
 GO
