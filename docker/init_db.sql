@@ -85,8 +85,8 @@ CREATE TABLE dbo.TipoDeduccion (
   , Obligatorio BIT NOT NULL DEFAULT 0
   , Porcentual BIT NOT NULL DEFAULT 0
   , Valor DECIMAL(10, 4) NOT NULL DEFAULT 0
-  , TipoMovimientoId INT NOT NULL
-  , CONSTRAINT FK_TipoDeduccion_TipoMovimiento FOREIGN KEY (TipoMovimientoId) REFERENCES dbo.TipoMovimiento(id)
+  , idTipoMovimiento INT NOT NULL
+  , CONSTRAINT FK_TipoDeduccion_TipoMovimiento FOREIGN KEY (idTipoMovimiento) REFERENCES dbo.TipoMovimiento(id)
 );
 
 CREATE TABLE dbo.TipoUsuario (
@@ -122,9 +122,9 @@ CREATE TABLE dbo.Empleado (
   , Apellido VARCHAR(255) NOT NULL
   , FechaIngreso DATE NOT NULL
   , FechaNacimiento DATE NULL
-  , PuestoId INT NOT NULL
+  , idPuesto INT NOT NULL
   , Activo BIT NOT NULL DEFAULT 1
-  , CONSTRAINT FK_Empleado_Puesto FOREIGN KEY (PuestoId) REFERENCES dbo.Puesto(id)
+  , CONSTRAINT FK_Empleado_Puesto FOREIGN KEY (idPuesto) REFERENCES dbo.Puesto(id)
 );
 
 -- Periodos de trabajo
@@ -143,90 +143,90 @@ CREATE TABLE dbo.Semana (
   , Ano INT NOT NULL
   , FechaInicio DATE NOT NULL
   , FechaFin DATE NOT NULL
-  , MesId INT NULL
-  , CONSTRAINT FK_Semana_Mes FOREIGN KEY (MesId) REFERENCES dbo.Mes(id)
+  , idMes INT NULL
+  , CONSTRAINT FK_Semana_Mes FOREIGN KEY (idMes) REFERENCES dbo.Mes(id)
 );
 
 -- Horarios y asistencia
 
 CREATE TABLE dbo.HorarioJornada (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , EmpleadoId INT NOT NULL
-  , SemanaId INT NOT NULL
-  , TipoJornadaId INT NOT NULL
+  , idEmpleado INT NOT NULL
+  , idSemana INT NOT NULL
+  , idTipoJornada INT NOT NULL
   , DiaSemana INT NOT NULL CHECK (DiaSemana BETWEEN 1 AND 7)
   , EsDiaDescanso BIT NOT NULL DEFAULT 0
-  , CONSTRAINT FK_HorarioJornada_Empleado FOREIGN KEY (EmpleadoId) REFERENCES dbo.Empleado(id)
-  , CONSTRAINT FK_HorarioJornada_Semana FOREIGN KEY (SemanaId) REFERENCES dbo.Semana(id)
-  , CONSTRAINT FK_HorarioJornada_TipoJornada FOREIGN KEY (TipoJornadaId) REFERENCES dbo.TipoJornada(id)
-  , CONSTRAINT UQ_HorarioJornada UNIQUE (EmpleadoId, SemanaId, DiaSemana)
+  , CONSTRAINT FK_HorarioJornada_Empleado FOREIGN KEY (idEmpleado) REFERENCES dbo.Empleado(id)
+  , CONSTRAINT FK_HorarioJornada_Semana FOREIGN KEY (idSemana) REFERENCES dbo.Semana(id)
+  , CONSTRAINT FK_HorarioJornada_TipoJornada FOREIGN KEY (idTipoJornada) REFERENCES dbo.TipoJornada(id)
+  , CONSTRAINT UQ_HorarioJornada UNIQUE (idEmpleado, idSemana, DiaSemana)
 );
 
 CREATE TABLE dbo.AsistenciaAJornada (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , EmpleadoId INT NOT NULL
-  , HorarioJornadaId INT NULL
+  , idEmpleado INT NOT NULL
+  , idHorarioJornada INT NULL
   , Fecha DATE NOT NULL
   , HoraEntrada TIME(0) NULL
   , HoraSalida TIME(0) NULL
   , HorasTrabajadas DECIMAL(5, 2) NULL
   , Estado VARCHAR(50) NOT NULL DEFAULT 'Registrado'
-  , CONSTRAINT FK_AsistenciaAJornada_Empleado FOREIGN KEY (EmpleadoId) REFERENCES dbo.Empleado(id)
-  , CONSTRAINT FK_AsistenciaAJornada_Horario FOREIGN KEY (HorarioJornadaId) REFERENCES dbo.HorarioJornada(id)
+  , CONSTRAINT FK_AsistenciaAJornada_Empleado FOREIGN KEY (idEmpleado) REFERENCES dbo.Empleado(id)
+  , CONSTRAINT FK_AsistenciaAJornada_Horario FOREIGN KEY (idHorarioJornada) REFERENCES dbo.HorarioJornada(id)
 );
 
 -- Pagos (Planillas)
 
 CREATE TABLE dbo.Planilla (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , EmpleadoId INT NOT NULL
+  , idEmpleado INT NOT NULL
   , FechaPago DATE NOT NULL
   , IngresoBruto DECIMAL(10, 2) NOT NULL DEFAULT 0
   , TotalDeducciones DECIMAL(10, 2) NOT NULL DEFAULT 0
   , IngresoNeto AS (IngresoBruto - TotalDeducciones) PERSISTED
   , Observaciones VARCHAR(500) NULL
-  , CONSTRAINT FK_Planilla_Empleado FOREIGN KEY (EmpleadoId) REFERENCES dbo.Empleado(id)
+  , CONSTRAINT FK_Planilla_Empleado FOREIGN KEY (idEmpleado) REFERENCES dbo.Empleado(id)
 );
 
 CREATE TABLE dbo.PlanillaSemanal (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , PlanillaId INT NOT NULL UNIQUE
-  , SemanaId INT NOT NULL
-  , CONSTRAINT FK_PlanillaSemanal_Planilla FOREIGN KEY (PlanillaId) REFERENCES dbo.Planilla(id)
-  , CONSTRAINT FK_PlanillaSemanal_Semana FOREIGN KEY (SemanaId) REFERENCES dbo.Semana(id)
+  , idPlanilla INT NOT NULL UNIQUE
+  , idSemana INT NOT NULL
+  , CONSTRAINT FK_PlanillaSemanal_Planilla FOREIGN KEY (idPlanilla) REFERENCES dbo.Planilla(id)
+  , CONSTRAINT FK_PlanillaSemanal_Semana FOREIGN KEY (idSemana) REFERENCES dbo.Semana(id)
 );
 
 CREATE TABLE dbo.PlanillaMensual (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , PlanillaId INT NOT NULL UNIQUE
-  , MesId INT NOT NULL
-  , CONSTRAINT FK_PlanillaMensual_Planilla FOREIGN KEY (PlanillaId) REFERENCES dbo.Planilla(id)
-  , CONSTRAINT FK_PlanillaMensual_Mes FOREIGN KEY (MesId) REFERENCES dbo.Mes(id)
+  , idPlanilla INT NOT NULL UNIQUE
+  , idMes INT NOT NULL
+  , CONSTRAINT FK_PlanillaMensual_Planilla FOREIGN KEY (idPlanilla) REFERENCES dbo.Planilla(id)
+  , CONSTRAINT FK_PlanillaMensual_Mes FOREIGN KEY (idMes) REFERENCES dbo.Mes(id)
 );
 
 CREATE TABLE dbo.PlanillaAplicada (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , PlanillaId INT NOT NULL
-  , EmpleadoId INT NOT NULL
+  , idPlanilla INT NOT NULL
+  , idEmpleado INT NOT NULL
   , FechaAplicacion DATE NOT NULL DEFAULT (GETDATE())
   , Estado VARCHAR(50) NOT NULL DEFAULT 'Aplicada'
-  , CONSTRAINT FK_PlanillaAplicada_Planilla FOREIGN KEY (PlanillaId) REFERENCES dbo.Planilla(id)
-  , CONSTRAINT FK_PlanillaAplicada_Empleado FOREIGN KEY (EmpleadoId) REFERENCES dbo.Empleado(id)
+  , CONSTRAINT FK_PlanillaAplicada_Planilla FOREIGN KEY (idPlanilla) REFERENCES dbo.Planilla(id)
+  , CONSTRAINT FK_PlanillaAplicada_Empleado FOREIGN KEY (idEmpleado) REFERENCES dbo.Empleado(id)
 );
 
 -- Movimientos de planilla
 
 CREATE TABLE dbo.MovPlanilla (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , PlanillaSemanalId INT NOT NULL
-  , AsistenciaId INT NULL
-  , TipoMovimientoId INT NOT NULL
+  , idPlanillaSemanal INT NOT NULL
+  , idAsistencia INT NULL
+  , idTipoMovimiento INT NOT NULL
   , Cantidad DECIMAL(5, 2) NULL
   , Monto DECIMAL(10, 2) NOT NULL
   , Fecha DATE NOT NULL
-  , CONSTRAINT FK_MovPlanilla_PlanillaSemanal FOREIGN KEY (PlanillaSemanalId) REFERENCES dbo.PlanillaSemanal(id)
-  , CONSTRAINT FK_MovPlanilla_Asistencia FOREIGN KEY (AsistenciaId) REFERENCES dbo.AsistenciaAJornada(id)
-  , CONSTRAINT FK_MovPlanilla_TipoMovimiento FOREIGN KEY (TipoMovimientoId) REFERENCES dbo.TipoMovimiento(id)
+  , CONSTRAINT FK_MovPlanilla_PlanillaSemanal FOREIGN KEY (idPlanillaSemanal) REFERENCES dbo.PlanillaSemanal(id)
+  , CONSTRAINT FK_MovPlanilla_Asistencia FOREIGN KEY (idAsistencia) REFERENCES dbo.AsistenciaAJornada(id)
+  , CONSTRAINT FK_MovPlanilla_TipoMovimiento FOREIGN KEY (idTipoMovimiento) REFERENCES dbo.TipoMovimiento(id)
 );
 
 -- Deducciones
@@ -240,40 +240,40 @@ CREATE TABLE dbo.Deduccion (
 
 CREATE TABLE dbo.DeduccionFija (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , DeduccionId INT NOT NULL UNIQUE
+  , idDeduccion INT NOT NULL UNIQUE
   , Monto DECIMAL(10, 2) NOT NULL CHECK (Monto >= 0)
-  , CONSTRAINT FK_DeduccionFija_Deduccion FOREIGN KEY (DeduccionId) REFERENCES dbo.Deduccion(id)
+  , CONSTRAINT FK_DeduccionFija_Deduccion FOREIGN KEY (idDeduccion) REFERENCES dbo.Deduccion(id)
 );
 
 CREATE TABLE dbo.DeduccionPorcentual (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , DeduccionId INT NOT NULL UNIQUE
+  , idDeduccion INT NOT NULL UNIQUE
   , Porcentaje DECIMAL(5, 2) NOT NULL CHECK (Porcentaje BETWEEN 0 AND 100)
-  , CONSTRAINT FK_DeduccionPorcentual_Deduccion FOREIGN KEY (DeduccionId) REFERENCES dbo.Deduccion(id)
+  , CONSTRAINT FK_DeduccionPorcentual_Deduccion FOREIGN KEY (idDeduccion) REFERENCES dbo.Deduccion(id)
 );
 
 CREATE TABLE dbo.DeduccionAplicada (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , PlanillaId INT NOT NULL
-  , EmpleadoId INT NOT NULL
-  , DeduccionId INT NOT NULL
+  , idPlanilla INT NOT NULL
+  , idEmpleado INT NOT NULL
+  , idDeduccion INT NOT NULL
   , Monto DECIMAL(10, 2) NOT NULL CHECK (Monto >= 0)
-  , CONSTRAINT FK_DeduccionAplicada_Planilla FOREIGN KEY (PlanillaId) REFERENCES dbo.Planilla(id)
-  , CONSTRAINT FK_DeduccionAplicada_Empleado FOREIGN KEY (EmpleadoId) REFERENCES dbo.Empleado(id)
-  , CONSTRAINT FK_DeduccionAplicada_Deduccion FOREIGN KEY (DeduccionId) REFERENCES dbo.Deduccion(id)
+  , CONSTRAINT FK_DeduccionAplicada_Planilla FOREIGN KEY (idPlanilla) REFERENCES dbo.Planilla(id)
+  , CONSTRAINT FK_DeduccionAplicada_Empleado FOREIGN KEY (idEmpleado) REFERENCES dbo.Empleado(id)
+  , CONSTRAINT FK_DeduccionAplicada_Deduccion FOREIGN KEY (idDeduccion) REFERENCES dbo.Deduccion(id)
 );
 
 CREATE TABLE dbo.EmpXTipoDed (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , EmpleadoId INT NOT NULL
-  , TipoDeduccionId INT NOT NULL
+  , idEmpleado INT NOT NULL
+  , idTipoDeduccion INT NOT NULL
   , Valor DECIMAL(10, 4) NOT NULL
   , FechaInicio DATE NOT NULL
   , FechaFin DATE NULL
   , Activo BIT NOT NULL DEFAULT 1
-  , CONSTRAINT FK_EmpXTipoDed_Empleado FOREIGN KEY (EmpleadoId) REFERENCES dbo.Empleado(id)
-  , CONSTRAINT FK_EmpXTipoDed_TipoDeduccion FOREIGN KEY (TipoDeduccionId) REFERENCES dbo.TipoDeduccion(id)
-  , CONSTRAINT UQ_EmpXTipoDed UNIQUE (EmpleadoId, TipoDeduccionId, FechaInicio)
+  , CONSTRAINT FK_EmpXTipoDed_Empleado FOREIGN KEY (idEmpleado) REFERENCES dbo.Empleado(id)
+  , CONSTRAINT FK_EmpXTipoDed_TipoDeduccion FOREIGN KEY (idTipoDeduccion) REFERENCES dbo.TipoDeduccion(id)
+  , CONSTRAINT UQ_EmpXTipoDed UNIQUE (idEmpleado, idTipoDeduccion, FechaInicio)
 );
 
 -- Usuarios
@@ -291,23 +291,23 @@ CREATE TABLE dbo.Usuario (
 
 CREATE TABLE dbo.UsuarioEmpleado (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , UsuarioId INT NOT NULL
-  , EmpleadoId INT NOT NULL
-  , CONSTRAINT FK_UsuarioEmpleado_Usuario FOREIGN KEY (UsuarioId) REFERENCES dbo.Usuario(id)
-  , CONSTRAINT FK_UsuarioEmpleado_Empleado FOREIGN KEY (EmpleadoId) REFERENCES dbo.Empleado(id)
+  , idUsuario INT NOT NULL
+  , idEmpleado INT NOT NULL
+  , CONSTRAINT FK_UsuarioEmpleado_Usuario FOREIGN KEY (idUsuario) REFERENCES dbo.Usuario(id)
+  , CONSTRAINT FK_UsuarioEmpleado_Empleado FOREIGN KEY (idEmpleado) REFERENCES dbo.Empleado(id)
 );
 
 -- Bitacora de eventos
 
 CREATE TABLE dbo.BitacoraEvento (
   id INT PRIMARY KEY IDENTITY(1,1)
-  , UsuarioId INT NOT NULL
-  , TipoEventoId INT NOT NULL
+  , idUsuario INT NOT NULL
+  , idTipoEvento INT NOT NULL
   , IP VARCHAR(45) NULL
   , FechaHora DATETIME NOT NULL DEFAULT SYSUTCDATETIME()
   , Datos NVARCHAR(MAX) NULL
-  , CONSTRAINT FK_BitacoraEvento_Usuario FOREIGN KEY (UsuarioId) REFERENCES dbo.Usuario(id)
-  , CONSTRAINT FK_BitacoraEvento_TipoEvento FOREIGN KEY (TipoEventoId) REFERENCES dbo.TipoEvento(id)
+  , CONSTRAINT FK_BitacoraEvento_Usuario FOREIGN KEY (idUsuario) REFERENCES dbo.Usuario(id)
+  , CONSTRAINT FK_BitacoraEvento_TipoEvento FOREIGN KEY (idTipoEvento) REFERENCES dbo.TipoEvento(id)
 );
 
 -- Manejo de errores

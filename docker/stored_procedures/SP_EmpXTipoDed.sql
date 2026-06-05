@@ -41,8 +41,8 @@ BEGIN
         IF EXISTS (
             SELECT 1
             FROM dbo.EmpXTipoDed etd
-            WHERE (etd.EmpleadoId = @inEmpleadoId)
-            AND (etd.TipoDeduccionId = @inTipoDeduccionId)
+            WHERE (etd.idEmpleado = @inEmpleadoId)
+            AND (etd.idTipoDeduccion = @inTipoDeduccionId)
             AND (etd.Activo = 1)
         )
         BEGIN
@@ -53,8 +53,8 @@ BEGIN
         BEGIN TRANSACTION;
 
             INSERT INTO dbo.EmpXTipoDed (
-                EmpleadoId
-                , TipoDeduccionId
+                idEmpleado
+                , idTipoDeduccion
                 , Valor
                 , FechaInicio
                 , FechaFin
@@ -124,8 +124,8 @@ BEGIN
         IF NOT EXISTS (
             SELECT 1
             FROM dbo.EmpXTipoDed etd
-            WHERE (etd.EmpleadoId = @inEmpleadoId)
-            AND (etd.TipoDeduccionId = @inTipoDeduccionId)
+            WHERE (etd.idEmpleado = @inEmpleadoId)
+            AND (etd.idTipoDeduccion = @inTipoDeduccionId)
             AND (etd.Activo = 1)
         )
         BEGIN
@@ -138,8 +138,8 @@ BEGIN
             UPDATE dbo.EmpXTipoDed
             SET Activo = 0
                 , FechaFin = @inFechaFin
-            WHERE (EmpleadoId = @inEmpleadoId)
-            AND (TipoDeduccionId = @inTipoDeduccionId)
+            WHERE (idEmpleado = @inEmpleadoId)
+            AND (idTipoDeduccion = @inTipoDeduccionId)
             AND (Activo = 1);
 
         COMMIT TRANSACTION;
@@ -192,8 +192,8 @@ BEGIN
 
         SELECT
             etd.id
-            , etd.EmpleadoId
-            , etd.TipoDeduccionId
+            , etd.idEmpleado
+            , etd.idTipoDeduccion
             , td.Nombre AS NombreDeduccion
             , td.Obligatorio
             , td.Porcentual
@@ -202,8 +202,8 @@ BEGIN
             , etd.FechaFin
             , etd.Activo
         FROM dbo.EmpXTipoDed etd
-        INNER JOIN dbo.TipoDeduccion td ON (td.id = etd.TipoDeduccionId)
-        WHERE (etd.EmpleadoId = @inEmpleadoId)
+        INNER JOIN dbo.TipoDeduccion td ON (td.id = etd.idTipoDeduccion)
+        WHERE (etd.idEmpleado = @inEmpleadoId)
         ORDER BY td.Nombre;
 
     END TRY
