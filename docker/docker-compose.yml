@@ -1,12 +1,9 @@
-version: '3.8'
-
 services:
   db:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: sql_server
-    ports:
-      - "1433:1433"
+    container_name: plantilla_obrera
     environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=YourStrong@Passw0rd
-      - MSSQL_PID=sa
+      ACCEPT_EULA: 'Y'
+      MSSQL_SA_PASSWORD: 'YourStrong!Passw0rd'
+    ports:
+      - '1433:1433'

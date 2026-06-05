@@ -11,8 +11,8 @@ BEGIN
     BEGIN TRY
 
         INSERT INTO dbo.EmpXTipoDed (
-            EmpleadoId
-            , TipoDeduccionId
+            idEmpleado
+            , idTipoDeduccion
             , Valor
             , FechaInicio
             , FechaFin

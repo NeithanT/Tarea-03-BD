@@ -47,7 +47,7 @@ BEGIN
                 , Apellido
                 , FechaIngreso
                 , FechaNacimiento
-                , PuestoId
+                , idPuesto
                 , Activo
             )
             VALUES (
@@ -117,12 +117,12 @@ BEGIN
             , e.Apellido
             , e.FechaIngreso
             , e.FechaNacimiento
-            , e.PuestoId
+            , e.idPuesto
             , p.Nombre AS NombrePuesto
             , p.SalarioPorHora
             , e.Activo
         FROM dbo.Empleado e
-        INNER JOIN dbo.Puesto p ON (p.id = e.PuestoId)
+        INNER JOIN dbo.Puesto p ON (p.id = e.idPuesto)
         WHERE (e.id = @inId);
 
     END TRY
@@ -174,7 +174,7 @@ BEGIN
             , e.FechaIngreso
             , e.Activo
         FROM dbo.Empleado e
-        INNER JOIN dbo.Puesto p ON (p.id = e.PuestoId)
+        INNER JOIN dbo.Puesto p ON (p.id = e.idPuesto)
         WHERE (e.Activo = 1)
         ORDER BY e.Nombre, e.Apellido;
 
@@ -228,7 +228,7 @@ BEGIN
             , e.FechaIngreso
             , e.Activo
         FROM dbo.Empleado e
-        INNER JOIN dbo.Puesto p ON (p.id = e.PuestoId)
+        INNER JOIN dbo.Puesto p ON (p.id = e.idPuesto)
         WHERE (e.Activo = 1)
         AND ((e.Nombre + ' ' + e.Apellido) LIKE ('%' + @inFiltro + '%'))
         ORDER BY e.Nombre, e.Apellido;
@@ -308,7 +308,7 @@ BEGIN
                 , Apellido = @inApellido
                 , FechaIngreso = @inFechaIngreso
                 , FechaNacimiento = @inFechaNacimiento
-                , PuestoId = @inPuestoId
+                , idPuesto = @inPuestoId
             WHERE (id = @inId);
 
         COMMIT TRANSACTION;

@@ -268,7 +268,7 @@ BEGIN
         IF EXISTS (
             SELECT 1
             FROM dbo.Empleado e
-            WHERE (e.PuestoId = @inId)
+            WHERE (e.idPuesto = @inId)
             AND (e.Activo = 1)
         )
         BEGIN
