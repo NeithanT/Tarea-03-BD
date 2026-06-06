@@ -11,51 +11,52 @@ CREATE OR ALTER PROCEDURE dbo.SP_EditarEmpleado
 AS
 BEGIN
   SET NOCOUNT ON;
-  
+
   BEGIN TRY
 
     BEGIN TRANSACTION
-    UPDATE Empleados
+
+    UPDATE dbo.Empleado
     SET
-      Nombre = @Nombre,
-      Apellido = @Apellido,
-      FechaIngreso = @FechaIngreso,
-      FechaNacimiento = @FechaNacimiento,
-      idPuesto = @idPuesto,
-      Activo = @Activo
-    WHERE idEmpleado = @idEmpleado;
-    
-    INSERT INTO dbo.BitacoraEventos (
+      Nombre = @Nombre
+      , Apellido = @Apellido
+      , FechaIngreso = @FechaIngreso
+      , FechaNacimiento = @FechaNacimiento
+      , idPuesto = @idPuesto
+      , Activo = @Activo
+    WHERE id = @idEmpleado;
+
+    INSERT INTO dbo.BitacoraEvento (
       idUsuario
       , idTipoEvento
       , IP
       , Datos
     )
-    SELECT 
+    VALUES (
       @inidAdmin
       , (SELECT id FROM dbo.TipoEvento WHERE Nombre = 'Update exitoso')
       , @inip
       , CONCAT('Empleado editado: ', @Nombre, ' ', @Apellido, ' (ID: ', @idEmpleado, ')')
     );
+
     COMMIT TRANSACTION
 
   END TRY
   BEGIN CATCH
     IF @@TRANCOUNT > 0
       ROLLBACK TRANSACTION;
-    
+
     INSERT INTO dbo.DBError (
-      id
-      , Username
+      Username
       , [Number]
       , [State]
       , Severity
       , [Line]
-      , [Procedure] NVARCHAR(200) NOT NULL
-      , [Message] NVARCHAR(MAX) NOT NULL
-      , [DateTime] DATETIME NOT NULL
+      , [Procedure]
+      , [Message]
+      , [DateTime]
     )
-    SELECT ( 
+    VALUES (
       (SELECT TOP 1 Username FROM dbo.Usuario WHERE id = @inidAdmin)
       , ERROR_NUMBER()
       , ERROR_STATE()
@@ -65,6 +66,7 @@ BEGIN
       , ERROR_MESSAGE()
       , GETDATE()
     );
+  END CATCH;
 
 END;
 GO

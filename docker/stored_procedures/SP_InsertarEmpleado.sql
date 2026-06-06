@@ -6,39 +6,43 @@ CREATE OR ALTER PROCEDURE dbo.SP_InsertarEmpleado
   , @PuestoId INT
   , @Activo BIT = 1
   , @inidAdmin INT
+  , @inip VARCHAR(45) = NULL
 AS
 BEGIN
   SET NOCOUNT ON;
-  
+
   BEGIN TRY
 
     BEGIN TRANSACTION
-    
+
     INSERT INTO dbo.Empleado (
-      Nombre,
-      Apellido,
-      FechaIngreso,
-      FechaNacimiento,
-      idPuesto,
-      Activo
+      Nombre
+      , Apellido
+      , FechaIngreso
+      , FechaNacimiento
+      , idPuesto
+      , Activo
     )
     VALUES (
-      @Nombre,
-      @Apellido,
-      @FechaIngreso,
-      @FechaNacimiento,
-      @PuestoId,
-      @Activo
+      @Nombre
+      , @Apellido
+      , @FechaIngreso
+      , @FechaNacimiento
+      , @PuestoId
+      , @Activo
     );
 
     INSERT INTO dbo.BitacoraEvento (
-      idTipoEvento,
-      Descripcion,
-      idAdmin
-    )    VALUES (
-      (SELECT id FROM dbo.TipoEvento WHERE Nombre = 'Insercion exitosa')
+      idUsuario
+      , idTipoEvento
+      , IP
+      , Datos
+    )
+    VALUES (
+      @inidAdmin
+      , (SELECT id FROM dbo.TipoEvento WHERE Nombre = 'Insercion exitosa')
+      , @inip
       , 'Se insertó un empleado: ' + @Nombre + ' ' + @Apellido
-      , @inidAdmin
     );
 
     COMMIT TRANSACTION
@@ -49,25 +53,24 @@ BEGIN
       ROLLBACK TRANSACTION;
 
     INSERT INTO dbo.DBError (
-      id,
-      Username,
-      [Number],
-      [State],
-      Severity,
-      [Line],
-      [Procedure] NVARCHAR(200) NOT NULL,
-      [Message] NVARCHAR(MAX) NOT NULL,
-      [DateTime] DATETIME NOT NULL
+      Username
+      , [Number]
+      , [State]
+      , Severity
+      , [Line]
+      , [Procedure]
+      , [Message]
+      , [DateTime]
     )
-    SELECT (
-      (SELECT TOP 1 Username FROM dbo.Usuario WHERE id = @inidAdmin),
-      ERROR_NUMBER(),
-      ERROR_STATE(),
-      ERROR_SEVERITY(),
-      ERROR_LINE(),
-      ERROR_PROCEDURE(),
-      ERROR_MESSAGE(),
-      GETDATE()
+    VALUES (
+      (SELECT TOP 1 Username FROM dbo.Usuario WHERE id = @inidAdmin)
+      , ERROR_NUMBER()
+      , ERROR_STATE()
+      , ERROR_SEVERITY()
+      , ERROR_LINE()
+      , ERROR_PROCEDURE()
+      , ERROR_MESSAGE()
+      , GETDATE()
     );
   END CATCH;
 

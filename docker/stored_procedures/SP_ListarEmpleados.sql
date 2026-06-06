@@ -1,15 +1,16 @@
 CREATE OR ALTER PROCEDURE dbo.SP_ListarEmpleados
   @inidAdmin INT
+  , @inip VARCHAR(45) = NULL
   , @outResultCode INT OUTPUT
 AS
 BEGIN
   SET NOCOUNT ON;
-  
+
   BEGIN TRY
 
     SET @outResultCode = 0;
 
-    SELECT 
+    SELECT
       e.id
       , e.Cedula
       , e.Nombre
@@ -22,36 +23,35 @@ BEGIN
     INNER JOIN dbo.Puesto p ON e.idPuesto = p.id
     WHERE e.Activo = 1
     ORDER BY e.Nombre, e.Apellido;
-  
+
     INSERT INTO dbo.BitacoraEvento (
-      idTipoEvento
-      , Descripcion
-      , idAdmin
+      idUsuario
+      , idTipoEvento
+      , IP
+      , Datos
     )
-
-    SELECT (
-      (SELECT id FROM dbo.TipoEvento WHERE Nombre = 'Listar Empleados')
+    VALUES (
+      @inidAdmin
+      , (SELECT id FROM dbo.TipoEvento WHERE Nombre = 'Listar Empleados')
+      , @inip
       , 'Listado de empleados'
-      , @inidAdmin
     );
-
 
   END TRY
   BEGIN CATCH
     SET @outResultCode = 50001;
 
     INSERT INTO dbo.DBError (
-      id
-      , Username
+      Username
       , [Number]
       , [State]
       , Severity
       , [Line]
-      , [Procedure] NVARCHAR(200) NOT NULL
-      , [Message] NVARCHAR(MAX) NOT NULL
-      , [DateTime] DATETIME NOT NULL
+      , [Procedure]
+      , [Message]
+      , [DateTime]
     )
-    SELECT ( 
+    VALUES (
       (SELECT TOP 1 Username FROM dbo.Usuario WHERE id = @inidAdmin)
       , ERROR_NUMBER()
       , ERROR_STATE()
@@ -59,9 +59,8 @@ BEGIN
       , ERROR_LINE()
       , ERROR_PROCEDURE()
       , ERROR_MESSAGE()
-      , GETDATE();
+      , GETDATE()
     );
-    
 
   END CATCH
 END;

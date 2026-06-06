@@ -65,7 +65,7 @@ pub async fn listar_empleados(
     let (_, session) = require_session(&state, &headers).await?;
     require_admin(&session)?;
 
-    let data = repository::admin::listar_empleados(&state).await?;
+    let data = repository::admin::listar_empleados(&state, session.user_id, &ip).await?;
  
     audit::write_event(
         &state,
@@ -120,7 +120,10 @@ pub async fn insertar_empleado(
 
     validate_employee_payload(&payload)?;
 
-    let result = repository::admin::insertar_empleado(&state, empleado_params(&payload)).await?;
+    let mut params = empleado_params(&payload);
+    params.push(DbParam::I32(session.user_id));
+    params.push(DbParam::String(ip.clone()));
+    let result = repository::admin::insertar_empleado(&state, params).await?;
 
     audit::write_event(
         &state,
@@ -153,6 +156,8 @@ pub async fn editar_empleado(
 
     let mut params = vec![DbParam::I32(id)];
     params.extend(empleado_params(&payload));
+    params.push(DbParam::String(ip.clone()));
+    params.push(DbParam::I32(session.user_id));
 
     let result = repository::admin::editar_empleado(&state, params).await?;
     let after = json!({
@@ -275,9 +280,6 @@ fn validate_employee_payload(payload: &EmpleadoPayload) -> ApiResult<()> {
 }
 
 async fn snapshot_empleado(state: &AppState, empleado_id: i32) -> ApiResult<Option<Value>> {
-    let rows = repository::admin::listar_empleados(state).await?;
-
-    Ok(rows.into_iter().find(|row| {
-        field_i32(row, &["EmpleadoId", "IdEmpleado", "empleado_id", "id"]) == Some(empleado_id)
-    }))
+    let rows = repository::admin::obtener_empleado(state, empleado_id).await?;
+    Ok(rows.into_iter().next())
 }
