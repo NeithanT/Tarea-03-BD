@@ -11,7 +11,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
 };
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::net::SocketAddr;
 
 #[derive(Debug, Deserialize)]
@@ -50,7 +50,7 @@ pub async fn login(
         ));
     }
 
-    let rows = repository::auth::validar_usuario(&state, username.clone(), payload.password).await?;
+    let rows = repository::auth::validar_usuario(&state, username.clone(), payload.password, &ip).await?;
     let user = rows.first();
     let authenticated = user.map(is_authenticated).unwrap_or(false);
     let user_id = user.and_then(|value| {
@@ -59,18 +59,8 @@ pub async fn login(
             &["UserId", "UsuarioId", "IdUsuario", "id", "usuario_id"],
         )
     });
-    let outcome = if authenticated { "Exitoso" } else { "No exitoso" };
 
-    audit::write_event(
-        &state,
-        user_id,
-        Some(&username),
-        AuditEvent::Login,
-        Some(outcome),
-        Some(json!({ "username": username, "resultado": outcome })),
-        &ip,
-    )
-    .await?;
+    // Bitácora registrada por el SP (Login Exitoso / Login No Exitoso / Login deshabilitado)
 
     if !authenticated {
         return Err(ApiError::Unauthorized);

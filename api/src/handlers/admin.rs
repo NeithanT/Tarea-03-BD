@@ -3,7 +3,7 @@ use crate::{
     db::DbParam,
     error::{ApiError, ApiResult},
     repository,
-    routes::{client_ip, field_i32, require_admin, require_session},
+    routes::{client_ip, require_admin, require_session},
     state::AppState,
 };
 use axum::{
