@@ -329,3 +329,4 @@ CREATE TABLE dbo.DBError (
   , [Message] NVARCHAR(MAX) NOT NULL
   , [DateTime] DATETIME NOT NULL
 );
+GO
