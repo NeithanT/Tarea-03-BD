@@ -29,8 +29,8 @@ BEGIN
       , idAdmin
     )
     SELECT (
-      (SELECT id FROM dbo.TipoEvento WHERE Nombre = 'Consulta Empleados')
-      , 'Listado de empleados por admin'
+      (SELECT id FROM dbo.TipoEvento WHERE Nombre = 'Listar empleados')
+      , 'Listado de empleados'
       , @inidAdmin
     );
 
@@ -39,22 +39,28 @@ BEGIN
   BEGIN CATCH
     SET @outResultCode = 50001;
 
-    id INT PRIMARY KEY IDENTITY(1,1)
-    , Username NVARCHAR(100) NOT NULL
-    , [Number] INT NOT NULL
-    , [State] INT NOT NULL
-    , Severity INT NOT NULL
-    , [Line] INT NOT NULL
-    , [Procedure] NVARCHAR(200) NOT NULL
-    , [Message] NVARCHAR(MAX) NOT NULL
-    , [DateTime] DATETIME NOT NULL
-    ;
     INSERT INTO dbo.DBError (
-      Numero
-      , Mensaje
-      , Procedimiento
-      , Linea
+      id
+      , Username
+      , [Number]
+      , [State]
+      , Severity
+      , [Line]
+      , [Procedure] NVARCHAR(200) NOT NULL
+      , [Message] NVARCHAR(MAX) NOT NULL
+      , [DateTime] DATETIME NOT NULL
     )
+    SELECT ( 
+      (SELECT TOP 1 Username FROM dbo.Usuario WHERE id = @inidAdmin)
+      , ERROR_NUMBER()
+      , ERROR_STATE()
+      , ERROR_SEVERITY()
+      , ERROR_LINE()
+      , ERROR_PROCEDURE()
+      , ERROR_MESSAGE()
+      , GETDATE();
+    );
+    
 
   END CATCH
 END;
