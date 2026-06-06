@@ -28,8 +28,9 @@ BEGIN
       , Descripcion
       , idAdmin
     )
+
     SELECT (
-      (SELECT id FROM dbo.TipoEvento WHERE Nombre = 'Listar empleados')
+      (SELECT id FROM dbo.TipoEvento WHERE Nombre = 'Listar Empleados')
       , 'Listado de empleados'
       , @inidAdmin
     );
