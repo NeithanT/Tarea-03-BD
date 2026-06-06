@@ -35,6 +35,27 @@ pub struct ImpersonarRequest {
     pub empleado_id: i32,
 }
 
+pub async fn listar_puestos(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> ApiResult<Json<Value>> {
+    let (_, session) = require_session(&state, &headers).await?;
+    require_admin(&session)?;
+    let data = repository::admin::listar_puestos(&state).await?;
+    Ok(Json(json!({ "data": data })))
+}
+
+pub async fn obtener_empleado(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<i32>,
+) -> ApiResult<Json<Value>> {
+    let (_, session) = require_session(&state, &headers).await?;
+    require_admin(&session)?;
+    let data = repository::admin::obtener_empleado(&state, id).await?;
+    Ok(Json(json!({ "data": data })))
+}
+
 pub async fn listar_empleados(
     State(state): State<AppState>,
     ConnectInfo(peer_addr): ConnectInfo<SocketAddr>,
@@ -45,7 +66,7 @@ pub async fn listar_empleados(
     require_admin(&session)?;
 
     let data = repository::admin::listar_empleados(&state).await?;
-
+ 
     audit::write_event(
         &state,
         Some(session.user_id),
