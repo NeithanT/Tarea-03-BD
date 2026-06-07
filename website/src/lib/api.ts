@@ -94,12 +94,9 @@ export async function impersonar(empleadoId: number): Promise<AuthState> {
 }
 
 
-export async function regresarAdmin(): Promise<AuthState> {
-	const data = await request<{ session: AuthState['user'] }>('/api/empleado/regresar-admin', {
-		method: 'POST'
-	});
-	const token = authStore.getToken()!;
-	return { token, user: data.session };
+// Retorna 204 sin body; el caller debe limpiar impersonated_employee_id del store
+export async function regresarAdmin(): Promise<void> {
+	await request<void>('/api/empleado/regresar-admin', { method: 'POST' });
 }
 
 export async function planillasSemanales(limit?: number) {
