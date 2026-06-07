@@ -9,9 +9,7 @@
 
 <header>
 	<div class="brand">
-		<span class="brand-name">Sistema de Planillas</span>
-		<span class="sep" aria-hidden="true">/</span>
-		<span class="section">Administración</span>
+		<span class="brand-name">Sistema de Planillnas</span>
 	</div>
 
 	<div class="actions">
@@ -40,25 +38,10 @@
 		font-size: 0.875rem;
 	}
 
-	.brand svg {
-		width: 1.125rem;
-		height: 1.125rem;
-		stroke: #2563eb;
-		flex-shrink: 0;
-	}
 
 	.brand-name {
 		font-weight: 600;
 		color: #111827;
-	}
-
-	.sep {
-		color: #d1d5db;
-		font-weight: 300;
-	}
-
-	.section {
-		color: #6b7280;
 	}
 
 	.actions {
