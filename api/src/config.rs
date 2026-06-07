@@ -2,7 +2,7 @@ use std::{env, net::SocketAddr};
 
 const DEFAULT_BIND_HOST: &str = "127.0.0.1";
 const DEFAULT_BIND_PORT: u16 = 3000;
-const DEFAULT_CONNECTION_STRING: &str = "server=tcp:127.0.0.1,1433;user=sa;password=YourStrong@Passw0rd;database=master;TrustServerCertificate=true";
+const DEFAULT_CONNECTION_STRING: &str = "server=tcp:127.0.0.1,1433;user=sa;password=YourStrong!Passw0rd;database=Tarea03;TrustServerCertificate=true";
 
 #[derive(Clone, Debug)]
 pub struct Settings {

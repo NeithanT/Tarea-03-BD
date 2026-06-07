@@ -1,0 +1,50 @@
+export interface Empleado {
+	id: number;
+	Cedula: string;
+	Nombre: string;
+	Apellido: string;
+	Puesto: string;
+	FechaIngreso: string;
+	Activo: boolean;
+}
+
+export interface EmpleadoDetalle {
+	id: number;
+	Cedula: string;
+	Nombre: string;
+	Apellido: string;
+	idPuesto: number;
+	NombrePuesto: string;
+	FechaIngreso: string;
+	FechaNacimiento: string | null;
+	Activo: boolean;
+}
+
+export interface Puesto {
+	id: number;
+	Nombre: string;
+	SalarioPorHora: number;
+	Descripcion: string | null;
+}
+
+export interface EmpleadoPayload {
+	nombre: string;
+	apellido: string;
+	fecha_ingreso: string;
+	fecha_nacimiento: string | null;
+	puesto_id: number;
+	activo: boolean;
+}
+
+export interface SessionUser {
+	user_id: number;
+	username: string;
+	role: string;
+	employee_id: number | null;
+	impersonated_employee_id: number | null;
+}
+
+export interface AuthState {
+	token: string;
+	user: SessionUser;
+}
