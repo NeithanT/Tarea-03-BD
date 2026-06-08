@@ -262,7 +262,6 @@ DECLARE @myXml XML = '
 <TipoEvento Id="21" Nombre="Consultar planilla mensual"/>
 <TipoEvento Id="22" Nombre="Ingreso de marcas de asistencia"/>
 <TipoEvento Id="23" Nombre="Ingreso nuevas jornadas"/>
-<TipoEvento Id="24" Nombre="Listar empleados"/>
 </TiposEvento>
 <!--
 ======================================================
