@@ -609,6 +609,7 @@ BEGIN
                         , td.idTipoMovimiento
                         , NULL
                         , CAST(@ingresoBruto * etd.Valor AS DECIMAL(10, 2))
+                        , @FechaActual
                     FROM dbo.EmpXTipoDed etd
                     INNER JOIN dbo.TipoDeduccion td ON td.id = etd.idTipoDeduccion
                     WHERE etd.idEmpleado = @idEmpClose
@@ -638,6 +639,7 @@ BEGIN
                         , td.idTipoMovimiento
                         , NULL
                         , CAST(etd.Valor / @numJueves AS DECIMAL(10, 2))
+                        , @FechaActual
                     FROM dbo.EmpXTipoDed etd
                     INNER JOIN dbo.TipoDeduccion td ON td.id = etd.idTipoDeduccion
                     WHERE etd.idEmpleado = @idEmpClose
