@@ -190,6 +190,17 @@ pub async fn editar_empleado(
     Ok(Json(json!({ "data": result })))
 }
 
+pub async fn obtener_horario_empleado(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<i32>,
+) -> ApiResult<Json<Value>> {
+    let (_, session) = require_session(&state, &headers).await?;
+    require_admin(&session)?;
+    let data = repository::admin::obtener_horario_empleado_semana(&state, id).await?;
+    Ok(Json(json!({ "data": data })))
+}
+
 pub async fn eliminar_empleado(
     State(state): State<AppState>,
     ConnectInfo(peer_addr): ConnectInfo<SocketAddr>,

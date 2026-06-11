@@ -1,7 +1,7 @@
 CREATE OR ALTER PROCEDURE dbo.SP_ListarEmpleados
   @inidAdmin INT
   , @inip VARCHAR(45) = NULL
-  , @outResultCode INT OUTPUT
+  , @outResultCode INT = NULL OUTPUT
 AS
 BEGIN
   SET NOCOUNT ON;

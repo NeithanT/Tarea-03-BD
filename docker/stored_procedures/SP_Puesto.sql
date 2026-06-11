@@ -128,7 +128,7 @@ END
 GO
 
 CREATE PROCEDURE dbo.SP_Puesto_Listar
-    @outResultCode INT OUTPUT
+    @outResultCode INT = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;

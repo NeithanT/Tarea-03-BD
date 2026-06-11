@@ -4,6 +4,7 @@
 		listarEmpleados,
 		buscarEmpleados,
 		obtenerEmpleado,
+		obtenerHorarioEmpleado,
 		editarEmpleado,
 		listarPuestos,
 		impersonar,
@@ -11,18 +12,18 @@
 	} from '$lib/api';
 	import { authStore } from '$lib/auth';
 	import { ApiError } from '$lib/api';
-	import type { Empleado, EmpleadoDetalle, Puesto } from '$lib/types';
+	import type { Empleado, EmpleadoDetalle, HorarioDia, Puesto } from '$lib/types';
 	import { onMount } from 'svelte';
 	import Header from '../Header.svelte';
 
-	// ── Estado de la lista ───────────────────────────────────────────────────
+	//  Estado de la lista 
 	let empleados = $state<Empleado[]>([]);
 	let loadingLista = $state(true);
 	let errorLista = $state('');
 	let filtro = $state('');
 	let debounceTimer: ReturnType<typeof setTimeout>;
 
-	// ── Estado del panel de edición ──────────────────────────────────────────
+	//  Estado del panel de edición 
 	let seleccionado = $state<EmpleadoDetalle | null>(null);
 	let puestos = $state<Puesto[]>([]);
 	let loadingDetalle = $state(false);
@@ -30,6 +31,11 @@
 	let loadingImpersonar = $state(false);
 	let errorForm = $state('');
 	let mensajeOk = $state('');
+
+	//  Estado del horario 
+	let horario = $state<HorarioDia[]>([]);
+	let loadingHorario = $state(false);
+	let errorHorario = $state('');
 
 	// Campos del formulario (sincronizados con `seleccionado`)
 	let fNombre = $state('');
@@ -39,11 +45,11 @@
 	let fPuestoId = $state(0);
 	let fActivo = $state(true);
 
-	// ── Auth ─────────────────────────────────────────────────────────────────
+	//  Auth 
 	const auth = $derived($authStore);
 	const username = $derived(auth?.user.username ?? '');
 
-	// ── Carga inicial ─────────────────────────────────────────────────────────
+	//  Carga inicial 
 	onMount(() => {
 		cargarEmpleados();
 	});
@@ -60,7 +66,7 @@
 		}
 	}
 
-	// ── Búsqueda con debounce ─────────────────────────────────────────────────
+	//  Búsqueda con debounce 
 	function onFiltroInput() {
 		clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(async () => {
@@ -78,13 +84,15 @@
 		}, 300);
 	}
 
-	// ── Seleccionar empleado ──────────────────────────────────────────────────
+	//  Seleccionar empleado 
 	async function seleccionar(id: number) {
 		if (loadingDetalle) return;
 		errorForm = '';
 		mensajeOk = '';
+		errorHorario = '';
 		loadingDetalle = true;
 		seleccionado = null;
+		horario = [];
 
 		if (puestos.length === 0) {
 			try {
@@ -108,15 +116,27 @@
 		} finally {
 			loadingDetalle = false;
 		}
+
+		// Load horario independently so employee info still shows if it fails
+		loadingHorario = true;
+		try {
+			horario = await obtenerHorarioEmpleado(id);
+		} catch {
+			errorHorario = 'No se pudo cargar el horario';
+		} finally {
+			loadingHorario = false;
+		}
 	}
 
 	function cerrarPanel() {
 		seleccionado = null;
 		errorForm = '';
 		mensajeOk = '';
+		horario = [];
+		errorHorario = '';
 	}
 
-	// ── Guardar edición ───────────────────────────────────────────────────────
+	//  Guardar edición 
 	async function guardar() {
 		if (!seleccionado) return;
 		errorForm = '';
@@ -141,7 +161,7 @@
 		}
 	}
 
-	// ── Impersonar ────────────────────────────────────────────────────────────
+	//  Impersonar 
 	async function handleImpersonar() {
 		if (!seleccionado) return;
 		loadingImpersonar = true;
@@ -157,7 +177,7 @@
 		}
 	}
 
-	// ── Cerrar sesión ─────────────────────────────────────────────────────────
+	//  Cerrar sesión 
 	async function handleLogout() {
 		try {
 			await logoutApi();
@@ -177,7 +197,7 @@
 
 	<!-- Main content -->
 	<div class="content">
-		<!-- ── Lista de empleados ── -->
+		<!--  Lista de empleados  -->
 		<aside class="sidebar">
 			<div class="sidebar-search">
 				<div class="search-wrap">
@@ -237,7 +257,7 @@
 			</div>
 		</aside>
 
-		<!-- ── Panel de edición ── -->
+		<!--  Panel de edición  -->
 		<main class="detail">
 			{#if loadingDetalle}
 				<div class="detail-placeholder">
@@ -252,91 +272,101 @@
 							<p class="detail-meta">Cédula: {seleccionado.Cedula} · ID: {seleccionado.id}</p>
 						</div>
 						<button class="btn-ghost" onclick={cerrarPanel} aria-label="Cerrar panel">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								aria-hidden="true"
-							>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+								stroke="currentColor" stroke-width="2" stroke-linecap="round"
+								stroke-linejoin="round" aria-hidden="true">
 								<line x1="18" y1="6" x2="6" y2="18" />
 								<line x1="6" y1="6" x2="18" y2="18" />
 							</svg>
 						</button>
 					</div>
 
-					<!-- Formulario -->
-					<div class="form-card">
-						<div class="form-grid-2">
-							<div class="field">
-								<label for="f-nombre" class="label">Nombre</label>
-								<input id="f-nombre" type="text" bind:value={fNombre} class="input" />
+					<!-- Info del empleado -->
+					<div class="info-card">
+						<div class="info-grid">
+							<div class="info-field">
+								<span class="info-label">Puesto</span>
+								<span class="info-value">{seleccionado.NombrePuesto}</span>
 							</div>
-							<div class="field">
-								<label for="f-apellido" class="label">Apellido</label>
-								<input id="f-apellido" type="text" bind:value={fApellido} class="input" />
+							<div class="info-field">
+								<span class="info-label">Fecha de ingreso</span>
+								<span class="info-value">{seleccionado.FechaIngreso?.slice(0, 10) ?? '—'}</span>
 							</div>
-						</div>
-
-						<div class="form-grid-2">
-							<div class="field">
-								<label for="f-ingreso" class="label">Fecha de ingreso</label>
-								<input id="f-ingreso" type="date" bind:value={fFechaIngreso} class="input" />
+							<div class="info-field">
+								<span class="info-label">Fecha de nacimiento</span>
+								<span class="info-value">{seleccionado.FechaNacimiento?.slice(0, 10) ?? '—'}</span>
 							</div>
-							<div class="field">
-								<label for="f-nacimiento" class="label">
-									Fecha de nacimiento
-									<span class="label-opt">(opcional)</span>
-								</label>
-								<input id="f-nacimiento" type="date" bind:value={fFechaNacimiento} class="input" />
+							<div class="info-field">
+								<span class="info-label">Estado</span>
+								<span class="badge {seleccionado.Activo ? 'badge--active' : 'badge--inactive'}">
+									{seleccionado.Activo ? 'Activo' : 'Inactivo'}
+								</span>
 							</div>
 						</div>
+					</div>
 
-						<div class="field">
-							<label for="f-puesto" class="label">Puesto</label>
-							<select id="f-puesto" bind:value={fPuestoId} class="input">
-								{#each puestos as p}
-									<option value={p.id}>{p.Nombre}</option>
-								{/each}
-							</select>
-						</div>
-
-						<div class="toggle-row">
-							<input
-								id="activo"
-								type="checkbox"
-								bind:checked={fActivo}
-								class="toggle-checkbox"
-							/>
-							<label for="activo" class="toggle-label">Empleado activo</label>
-						</div>
-
-						{#if errorForm}
-							<p class="alert alert--error">{errorForm}</p>
+					<!-- Horario semanal -->
+					<div class="section-title">
+						Horario semanal
+						{#if horario.length > 0}
+							<span class="section-range">
+								{horario[0].SemanaInicio} – {horario[0].SemanaFin}
+							</span>
 						{/if}
-						{#if mensajeOk}
-							<p class="alert alert--ok">{mensajeOk}</p>
-						{/if}
+					</div>
 
-						<div class="form-actions">
-							<button
-								onclick={guardar}
-								disabled={loadingGuardar}
-								class="btn-primary"
-							>
-								{loadingGuardar ? 'Guardando…' : 'Guardar cambios'}
-							</button>
-							<button
-								onclick={handleImpersonar}
-								disabled={loadingImpersonar}
-								class="btn-outline"
-							>
-								{loadingImpersonar ? 'Cargando…' : 'Ver como empleado'}
-							</button>
+					{#if loadingHorario}
+						<p class="horario-state">Cargando horario…</p>
+					{:else if errorHorario}
+						<p class="horario-state horario-state--error">{errorHorario}</p>
+					{:else if horario.length === 0}
+						<p class="horario-state">Sin horario asignado.</p>
+					{:else}
+						<div class="horario-table-wrap">
+							<table class="horario-table">
+								<thead>
+									<tr>
+										<th>Día</th>
+										<th>Fecha</th>
+										<th>Jornada</th>
+										<th>Horario</th>
+										<th>Descanso</th>
+									</tr>
+								</thead>
+								<tbody>
+									{#each horario as dia}
+										<tr class={dia.EsDiaDescanso ? 'row-descanso' : ''}>
+											<td class="td-dia">{dia.NombreDia}</td>
+											<td class="td-fecha">{dia.Fecha}</td>
+											<td>{dia.EsDiaDescanso ? '—' : dia.NombreJornada}</td>
+											<td class="td-hora">
+												{#if dia.EsDiaDescanso}
+													—
+												{:else}
+													{dia.HoraInicio} – {dia.HoraFin}
+												{/if}
+											</td>
+											<td class="td-descanso">
+												{#if dia.EsDiaDescanso}
+													<span class="badge badge--rest">Sí</span>
+												{/if}
+											</td>
+										</tr>
+									{/each}
+								</tbody>
+							</table>
 						</div>
+					{/if}
+
+					{#if errorForm}
+						<p class="alert alert--error" style="margin-top: 0.5rem">{errorForm}</p>
+					{/if}
+
+					<!-- Acción principal -->
+					<div class="panel-actions">
+						<button onclick={handleImpersonar} disabled={loadingImpersonar} class="btn-primary">
+							{loadingImpersonar ? 'Cargando…' : 'Impersonar'}
+						</button>
 					</div>
 				</div>
 			{:else}
@@ -364,8 +394,7 @@
 </div>
 
 <style>
-	/* ── Reset global element overrides (layout.css h1/h2/p are unlayered so
-	   they beat Tailwind-in-@layer; scoped selectors win by specificity) ── */
+
 	h1, p {
 		font-size: inherit;
 		font-weight: inherit;
@@ -373,23 +402,31 @@
 		line-height: inherit;
 	}
 
-	/* ── Shell ── */
+	/* Shell */
 	.shell {
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
+		width: 100%;
 		background: #f9fafb;
 		font-family: inherit;
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
 	}
 
-	/* ── Layout ── */
+	/* Layout */
 	.content {
+		width: 100%;
+		height: 100%;
 		display: flex;
 		flex: 1;
 		overflow: hidden;
 	}
 
-	/* ── Sidebar ── */
+	/* Sidebar */
 	.sidebar {
 		display: flex;
 		flex-direction: column;
@@ -529,7 +566,7 @@
 		text-overflow: ellipsis;
 	}
 
-	/* ── Detail panel ── */
+	/*  Detail panel  */
 	.detail {
 		flex: 1;
 		overflow-y: auto;
@@ -580,80 +617,160 @@
 		margin: 0;
 	}
 
-	/* ── Form card ── */
-	.form-card {
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
+	/*  Info card  */
+	.info-card {
 		background: #fff;
 		border: 1px solid #e5e7eb;
 		border-radius: 0.75rem;
-		padding: 1.5rem;
+		padding: 1.25rem 1.5rem;
 		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+		margin-bottom: 1.25rem;
 	}
 
-	.form-grid-2 {
+	.info-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 0.875rem;
+		gap: 0.875rem 1.5rem;
 	}
 
-	.field {
+	.info-field {
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
+		gap: 0.2rem;
 	}
 
-	.label {
-		font-size: 0.75rem;
+	.info-label {
+		font-size: 0.7rem;
 		font-weight: 500;
-		color: #374151;
-	}
-
-	.label-opt {
-		font-weight: 400;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
 		color: #9ca3af;
 	}
 
-	.input {
-		padding: 0.5rem 0.75rem;
+	.info-value {
 		font-size: 0.875rem;
-		border: 1px solid #d1d5db;
-		border-radius: 0.5rem;
-		background: #fff;
 		color: #111827;
-		outline: none;
-		transition: border-color 0.15s, box-shadow 0.15s;
-		font-family: inherit;
+		font-weight: 500;
 	}
 
-	.input:focus {
-		border-color: #3b82f6;
-		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+	/*  Badges  */
+	.badge {
+		display: inline-block;
+		padding: 0.15rem 0.5rem;
+		border-radius: 999px;
+		font-size: 0.7rem;
+		font-weight: 600;
+		letter-spacing: 0.02em;
 	}
 
-	.toggle-row {
+	.badge--active {
+		background: #dcfce7;
+		color: #16a34a;
+	}
+
+	.badge--inactive {
+		background: #fee2e2;
+		color: #dc2626;
+	}
+
+	.badge--rest {
+		background: #fef9c3;
+		color: #854d0e;
+	}
+
+	/*  Section heading  */
+	.section-title {
+		font-size: 0.8125rem;
+		font-weight: 600;
+		color: #374151;
+		margin-bottom: 0.625rem;
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
 	}
 
-	.toggle-checkbox {
-		width: 1rem;
-		height: 1rem;
-		border-radius: 0.25rem;
-		border: 1px solid #d1d5db;
-		accent-color: #2563eb;
-		cursor: pointer;
+	.section-range {
+		font-weight: 400;
+		color: #9ca3af;
 	}
 
-	.toggle-label {
-		font-size: 0.875rem;
+	/*  Horario table  */
+	.horario-table-wrap {
+		overflow-x: auto;
+		border: 1px solid #e5e7eb;
+		border-radius: 0.75rem;
+		background: #fff;
+		margin-bottom: 1.25rem;
+	}
+
+	.horario-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.8125rem;
+	}
+
+	.horario-table th {
+		text-align: left;
+		padding: 0.5rem 0.875rem;
+		font-size: 0.7rem;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		color: #6b7280;
+		background: #f9fafb;
+		border-bottom: 1px solid #e5e7eb;
+	}
+
+	.horario-table td {
+		padding: 0.5rem 0.875rem;
 		color: #374151;
-		cursor: pointer;
+		border-bottom: 1px solid #f3f4f6;
 	}
 
-	/* ── Alerts ── */
+	.horario-table tr:last-child td {
+		border-bottom: none;
+	}
+
+	.row-descanso {
+		background: #fefce8;
+	}
+
+	.td-dia {
+		font-weight: 600;
+		color: #111827;
+	}
+
+	.td-fecha {
+		color: #6b7280;
+	}
+
+	.td-hora {
+		font-variant-numeric: tabular-nums;
+	}
+
+	.td-descanso {
+		text-align: center;
+	}
+
+	.horario-state {
+		font-size: 0.8125rem;
+		color: #9ca3af;
+		padding: 0.75rem 0;
+		margin-bottom: 1rem;
+	}
+
+	.horario-state--error {
+		color: #ef4444;
+	}
+
+	/* Panel actions */
+	.panel-actions {
+		display: flex;
+		gap: 0.625rem;
+		padding-top: 0.25rem;
+	}
+
+	/*  Alerts  */
 	.alert {
 		padding: 0.5rem 0.75rem;
 		border-radius: 0.5rem;
@@ -666,18 +783,7 @@
 		color: #dc2626;
 	}
 
-	.alert--ok {
-		background: #f0fdf4;
-		color: #16a34a;
-	}
-
-	/* ── Buttons ── */
-	.form-actions {
-		display: flex;
-		gap: 0.625rem;
-		padding-top: 0.25rem;
-	}
-
+	/*  Buttons  */
 	.btn-primary {
 		flex: 1;
 		padding: 0.5rem 1rem;
@@ -697,29 +803,6 @@
 	}
 
 	.btn-primary:disabled {
-		opacity: 0.6;
-		cursor: not-allowed;
-	}
-
-	.btn-outline {
-		padding: 0.5rem 1rem;
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: #374151;
-		background: #fff;
-		border: 1px solid #d1d5db;
-		border-radius: 0.5rem;
-		cursor: pointer;
-		transition: background 0.15s;
-		font-family: inherit;
-		white-space: nowrap;
-	}
-
-	.btn-outline:hover:not(:disabled) {
-		background: #f9fafb;
-	}
-
-	.btn-outline:disabled {
 		opacity: 0.6;
 		cursor: not-allowed;
 	}
@@ -749,7 +832,7 @@
 		height: 1rem;
 	}
 
-	/* ── Spinner ── */
+	/*  Spinner  */
 	.spinner {
 		width: 1.5rem;
 		height: 1.5rem;

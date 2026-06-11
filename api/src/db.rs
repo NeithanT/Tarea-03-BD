@@ -51,6 +51,41 @@ impl Database {
         Ok(rows.iter().map(row_to_json).collect())
     }
 
+    pub async fn call_checked(
+        &self,
+        procedure: Procedure,
+        params: Vec<DbParam>,
+    ) -> anyhow::Result<Vec<Value>> {
+        let mut client = self.connect().await?;
+        let statement = build_checked_procedure_call(procedure, params.len());
+        let param_refs = params
+            .iter()
+            .map(|param| param as &dyn ToSql)
+            .collect::<Vec<_>>();
+
+        let mut results = client
+            .query(statement.as_str(), &param_refs)
+            .await
+            .with_context(|| format!("fallo al ejecutar {}", procedure.name()))?
+            .into_results()
+            .await
+            .with_context(|| format!("fallo al leer respuesta de {}", procedure.name()))?;
+
+        // Last result set is always `SELECT @outResultCode`.
+        let code_rows = results.pop().unwrap_or_default();
+        let result_code = code_rows
+            .first()
+            .and_then(|row| row.get::<i32, _>(0))
+            .unwrap_or(0);
+
+        if result_code != 0 {
+            anyhow::bail!("{} retornó código de error {}", procedure.name(), result_code);
+        }
+
+        let data_rows = results.into_iter().next().unwrap_or_default();
+        Ok(data_rows.iter().map(row_to_json).collect())
+    }
+
     async fn connect(&self) -> anyhow::Result<SqlClient> {
         let config = Config::from_ado_string(&self.connection_string)
             .context("DATABASE_URL/MSSQL_CONNECTION_STRING invalido")?;
@@ -95,6 +130,25 @@ fn build_procedure_call(procedure: Procedure, param_count: usize) -> String {
     }
 
     statement
+}
+
+fn build_checked_procedure_call(procedure: Procedure, param_count: usize) -> String {
+    let input_placeholders = (1..=param_count)
+        .map(|i| format!("@P{}", i))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    let args = if param_count > 0 {
+        format!("{}, @_rc OUTPUT", input_placeholders)
+    } else {
+        "@_rc OUTPUT".to_owned()
+    };
+
+    format!(
+        "DECLARE @_rc INT = 0; EXEC {} {}; SELECT @_rc AS outResultCode;",
+        procedure.qualified_name(),
+        args
+    )
 }
 
 fn row_to_json(row: &Row) -> Value {

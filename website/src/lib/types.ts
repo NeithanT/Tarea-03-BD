@@ -44,6 +44,18 @@ export interface SessionUser {
 	impersonated_employee_id: number | null;
 }
 
+export interface HorarioDia {
+	DiaSemana: number;
+	NombreDia: string;
+	EsDiaDescanso: boolean;
+	NombreJornada: string;
+	HoraInicio: string;
+	HoraFin: string;
+	Fecha: string;
+	SemanaInicio: string;
+	SemanaFin: string;
+}
+
 export interface AuthState {
 	token: string;
 	user: SessionUser;

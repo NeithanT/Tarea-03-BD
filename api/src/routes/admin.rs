@@ -12,5 +12,6 @@ pub fn router() -> Router<AppState> {
                 .put(handlers::admin::editar_empleado)
                 .delete(handlers::admin::eliminar_empleado),
         )
+        .route("/empleados/:id/horario", get(handlers::admin::obtener_horario_empleado))
         .route("/impersonar", post(handlers::admin::impersonar))
 }
