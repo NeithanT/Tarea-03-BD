@@ -16,14 +16,14 @@
 	import { onMount } from 'svelte';
 	import Header from '../Header.svelte';
 
-	// ── Estado de la lista ───────────────────────────────────────────────────
+	//  Estado de la lista 
 	let empleados = $state<Empleado[]>([]);
 	let loadingLista = $state(true);
 	let errorLista = $state('');
 	let filtro = $state('');
 	let debounceTimer: ReturnType<typeof setTimeout>;
 
-	// ── Estado del panel de edición ──────────────────────────────────────────
+	//  Estado del panel de edición 
 	let seleccionado = $state<EmpleadoDetalle | null>(null);
 	let puestos = $state<Puesto[]>([]);
 	let loadingDetalle = $state(false);
@@ -32,7 +32,7 @@
 	let errorForm = $state('');
 	let mensajeOk = $state('');
 
-	// ── Estado del horario ───────────────────────────────────────────────────
+	//  Estado del horario 
 	let horario = $state<HorarioDia[]>([]);
 	let loadingHorario = $state(false);
 	let errorHorario = $state('');
@@ -45,11 +45,11 @@
 	let fPuestoId = $state(0);
 	let fActivo = $state(true);
 
-	// ── Auth ─────────────────────────────────────────────────────────────────
+	//  Auth 
 	const auth = $derived($authStore);
 	const username = $derived(auth?.user.username ?? '');
 
-	// ── Carga inicial ─────────────────────────────────────────────────────────
+	//  Carga inicial 
 	onMount(() => {
 		cargarEmpleados();
 	});
@@ -66,7 +66,7 @@
 		}
 	}
 
-	// ── Búsqueda con debounce ─────────────────────────────────────────────────
+	//  Búsqueda con debounce 
 	function onFiltroInput() {
 		clearTimeout(debounceTimer);
 		debounceTimer = setTimeout(async () => {
@@ -84,7 +84,7 @@
 		}, 300);
 	}
 
-	// ── Seleccionar empleado ──────────────────────────────────────────────────
+	//  Seleccionar empleado 
 	async function seleccionar(id: number) {
 		if (loadingDetalle) return;
 		errorForm = '';
@@ -136,7 +136,7 @@
 		errorHorario = '';
 	}
 
-	// ── Guardar edición ───────────────────────────────────────────────────────
+	//  Guardar edición 
 	async function guardar() {
 		if (!seleccionado) return;
 		errorForm = '';
@@ -161,7 +161,7 @@
 		}
 	}
 
-	// ── Impersonar ────────────────────────────────────────────────────────────
+	//  Impersonar 
 	async function handleImpersonar() {
 		if (!seleccionado) return;
 		loadingImpersonar = true;
@@ -177,7 +177,7 @@
 		}
 	}
 
-	// ── Cerrar sesión ─────────────────────────────────────────────────────────
+	//  Cerrar sesión 
 	async function handleLogout() {
 		try {
 			await logoutApi();
@@ -197,7 +197,7 @@
 
 	<!-- Main content -->
 	<div class="content">
-		<!-- ── Lista de empleados ── -->
+		<!--  Lista de empleados  -->
 		<aside class="sidebar">
 			<div class="sidebar-search">
 				<div class="search-wrap">
@@ -257,7 +257,7 @@
 			</div>
 		</aside>
 
-		<!-- ── Panel de edición ── -->
+		<!--  Panel de edición  -->
 		<main class="detail">
 			{#if loadingDetalle}
 				<div class="detail-placeholder">
@@ -394,8 +394,7 @@
 </div>
 
 <style>
-	/* ── Reset global element overrides (layout.css h1/h2/p are unlayered so
-	   they beat Tailwind-in-@layer; scoped selectors win by specificity) ── */
+
 	h1, p {
 		font-size: inherit;
 		font-weight: inherit;
@@ -403,23 +402,31 @@
 		line-height: inherit;
 	}
 
-	/* ── Shell ── */
+	/* Shell */
 	.shell {
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
+		width: 100%;
 		background: #f9fafb;
 		font-family: inherit;
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
 	}
 
-	/* ── Layout ── */
+	/* Layout */
 	.content {
+		width: 100%;
+		height: 100%;
 		display: flex;
 		flex: 1;
 		overflow: hidden;
 	}
 
-	/* ── Sidebar ── */
+	/* Sidebar */
 	.sidebar {
 		display: flex;
 		flex-direction: column;
@@ -559,7 +566,7 @@
 		text-overflow: ellipsis;
 	}
 
-	/* ── Detail panel ── */
+	/*  Detail panel  */
 	.detail {
 		flex: 1;
 		overflow-y: auto;
@@ -610,7 +617,7 @@
 		margin: 0;
 	}
 
-	/* ── Info card ── */
+	/*  Info card  */
 	.info-card {
 		background: #fff;
 		border: 1px solid #e5e7eb;
@@ -646,7 +653,7 @@
 		font-weight: 500;
 	}
 
-	/* ── Badges ── */
+	/*  Badges  */
 	.badge {
 		display: inline-block;
 		padding: 0.15rem 0.5rem;
@@ -671,7 +678,7 @@
 		color: #854d0e;
 	}
 
-	/* ── Section heading ── */
+	/*  Section heading  */
 	.section-title {
 		font-size: 0.8125rem;
 		font-weight: 600;
@@ -687,7 +694,7 @@
 		color: #9ca3af;
 	}
 
-	/* ── Horario table ── */
+	/*  Horario table  */
 	.horario-table-wrap {
 		overflow-x: auto;
 		border: 1px solid #e5e7eb;
@@ -756,14 +763,14 @@
 		color: #ef4444;
 	}
 
-	/* ── Panel actions ── */
+	/* Panel actions */
 	.panel-actions {
 		display: flex;
 		gap: 0.625rem;
 		padding-top: 0.25rem;
 	}
 
-	/* ── Alerts ── */
+	/*  Alerts  */
 	.alert {
 		padding: 0.5rem 0.75rem;
 		border-radius: 0.5rem;
@@ -776,7 +783,7 @@
 		color: #dc2626;
 	}
 
-	/* ── Buttons ── */
+	/*  Buttons  */
 	.btn-primary {
 		flex: 1;
 		padding: 0.5rem 1rem;
@@ -825,7 +832,7 @@
 		height: 1rem;
 	}
 
-	/* ── Spinner ── */
+	/*  Spinner  */
 	.spinner {
 		width: 1.5rem;
 		height: 1.5rem;
