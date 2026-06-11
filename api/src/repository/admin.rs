@@ -7,7 +7,7 @@ use crate::{
 use serde_json::Value;
 
 pub async fn listar_empleados(state: &AppState, admin_id: i32, ip: &str) -> ApiResult<Vec<Value>> {
-    Ok(state.db.call(Procedure::ListarEmpleados, vec![
+    Ok(state.db.call_checked(Procedure::ListarEmpleados, vec![
         DbParam::I32(admin_id),
         DbParam::String(ip.to_owned()),
     ]).await?)
