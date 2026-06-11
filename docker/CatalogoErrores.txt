@@ -1,6 +1,0 @@
-Errores 50001 - 51000
-
-Errores de admin:
-
-50001 - Error al listar empleados
-50002 -

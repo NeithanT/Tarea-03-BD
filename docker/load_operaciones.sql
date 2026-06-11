@@ -77,28 +77,40 @@ BEGIN
     DECLARE @montoExtraDob   DECIMAL(10, 2);
 
     -- Cierre de semana (jueves)
-    DECLARE @idEmpClose        INT;
-    DECLARE @idPlanillaClose   INT;
+    DECLARE @idEmpClose         INT;
+    DECLARE @idPlanillaClose    INT;
     DECLARE @idPlanillaSemClose INT;
-    DECLARE @ingresoBruto      DECIMAL(10, 2);
-    DECLARE @totalDed          DECIMAL(10, 2);
-    DECLARE @lastDayMes        DATE;
-    DECLARE @lastDayISO        INT;
-    DECLARE @lastJuevesMes     DATE;
-    DECLARE @prevLastDay       DATE;
-    DECLARE @prevLastDayISO    INT;
-    DECLARE @monthPayStart     DATE;
-    DECLARE @numJueves         INT;
-    DECLARE @idPlanillaMens    INT;
+    DECLARE @ingresoBruto       DECIMAL(10, 2);
+    DECLARE @totalDed           DECIMAL(10, 2);
+    DECLARE @lastDayMes         DATE;
+    DECLARE @lastDayISO         INT;
+    DECLARE @lastJuevesMes      DATE;
+    DECLARE @prevLastDay        DATE;
+    DECLARE @prevLastDayISO     INT;
+    DECLARE @monthPayStart      DATE;
+    DECLARE @numJueves          INT;
+    DECLARE @idPlanillaMens     INT;
+
+    -- Iteradores de bucle (reemplazan cursores)
+    DECLARE @CurrentDateRow INT;
+    DECLARE @MaxDateRow     INT;
+    DECLARE @AsistRow       INT;
+    DECLARE @MaxAsistRow    INT;
+    DECLARE @CloseRow       INT;
+    DECLARE @MaxCloseRow    INT;
 
     BEGIN TRY
 
-        -- Temp tables para evitar cursores anidados
+        -- Tabla de fechas a procesar (orden ascendente)
+        CREATE TABLE #TempDates (
+            RowNum      INT IDENTITY(1,1) PRIMARY KEY
+            , FechaActual DATE
+        );
         CREATE TABLE #TempAsist (
-            Id          INT IDENTITY(1,1) PRIMARY KEY
-            , Cedula    VARCHAR(20)
-            , Entrada   NVARCHAR(20)
-            , Salida    NVARCHAR(20)
+            Id        INT IDENTITY(1,1) PRIMARY KEY
+            , Cedula  VARCHAR(20)
+            , Entrada NVARCHAR(20)
+            , Salida  NVARCHAR(20)
         );
         CREATE TABLE #TempClose (
             Id              INT IDENTITY(1,1) PRIMARY KEY
@@ -113,20 +125,21 @@ BEGIN
         SELECT @tmExtraDoble = id FROM dbo.TipoMovimiento WHERE Nombre = 'Credito Horas Extra Dobles';
 
         -- ===================================================================
-        -- Cursor principal: itera fechas del XML en orden ascendente
+        -- Poblar lista de fechas a procesar en orden ascendente
         -- ===================================================================
-        DECLARE cDates CURSOR LOCAL FAST_FORWARD FOR
-            SELECT DISTINCT TRY_CAST(n.value('@Fecha', 'NVARCHAR(20)') AS DATE)
-            FROM @XmlOperaciones.nodes('/Operaciones/FechaOperacion') T(n)
-            WHERE @FechaOperacion IS NULL
-               OR TRY_CAST(n.value('@Fecha', 'NVARCHAR(20)') AS DATE) = @FechaOperacion
-            ORDER BY 1;
+        INSERT INTO #TempDates (FechaActual)
+        SELECT DISTINCT TRY_CAST(FechaOp.value('@Fecha', 'NVARCHAR(20)') AS DATE)
+        FROM @XmlOperaciones.nodes('/Operaciones/FechaOperacion') T(FechaOp)
+        WHERE @FechaOperacion IS NULL
+           OR TRY_CAST(FechaOp.value('@Fecha', 'NVARCHAR(20)') AS DATE) = @FechaOperacion
+        ORDER BY 1;
 
-        OPEN cDates;
-        FETCH NEXT FROM cDates INTO @FechaActual;
+        SET @CurrentDateRow = 1;
+        SELECT @MaxDateRow = COUNT(*) FROM #TempDates;
 
-        WHILE @@FETCH_STATUS = 0
+        WHILE @CurrentDateRow <= @MaxDateRow
         BEGIN
+            SELECT @FechaActual = FechaActual FROM #TempDates WHERE RowNum = @CurrentDateRow;
             SET @FechaStr = CONVERT(NVARCHAR(10), @FechaActual, 120); -- 'YYYY-MM-DD'
 
             BEGIN TRANSACTION;
@@ -199,10 +212,10 @@ BEGIN
                 , DATEFROMPARTS(YEAR(InicioSem), MONTH(InicioSem), 1)
                 , EOMONTH(InicioSem)
             FROM (
-                SELECT TRY_CAST(n.value('@InicioSemana', 'NVARCHAR(20)') AS DATE) AS InicioSem
+                SELECT TRY_CAST(Semana.value('@InicioSemana', 'NVARCHAR(20)') AS DATE) AS InicioSem
                 FROM @XmlOperaciones.nodes(
                     '/Operaciones/FechaOperacion[@Fecha=sql:variable("@FechaStr")]/AsignarJornada'
-                ) T(n)
+                ) T(Semana)
             ) Sub
             WHERE InicioSem IS NOT NULL
               AND NOT EXISTS (
@@ -219,10 +232,10 @@ BEGIN
                 , (SELECT TOP 1 m3.id FROM dbo.Mes m3
                    WHERE m3.Numero = MONTH(InicioSem) AND m3.Ano = YEAR(InicioSem))
             FROM (
-                SELECT TRY_CAST(n.value('@InicioSemana', 'NVARCHAR(20)') AS DATE) AS InicioSem
+                SELECT TRY_CAST(Semana.value('@InicioSemana', 'NVARCHAR(20)') AS DATE) AS InicioSem
                 FROM @XmlOperaciones.nodes(
                     '/Operaciones/FechaOperacion[@Fecha=sql:variable("@FechaStr")]/AsignarJornada'
-                ) T(n)
+                ) T(Semana)
             ) Sub
             WHERE InicioSem IS NOT NULL
               AND NOT EXISTS (
@@ -236,36 +249,39 @@ BEGIN
                 Cedula, Nombre, Apellido, FechaIngreso, FechaNacimiento, idPuesto, Activo
             )
             SELECT
-                n.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
+                Empleado.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
                 -- Nombre = todo antes del ultimo espacio; Apellido = ultima palabra
                 , CASE
-                    WHEN CHARINDEX(' ', RTRIM(n.value('@Nombre', 'VARCHAR(255)'))) > 0
+                    WHEN CHARINDEX(' ', RTRIM(Empleado.value('@Nombre', 'VARCHAR(255)'))) > 0
                     THEN LEFT(
-                        n.value('@Nombre', 'VARCHAR(255)'),
-                        LEN(n.value('@Nombre', 'VARCHAR(255)'))
-                            - CHARINDEX(' ', REVERSE(RTRIM(n.value('@Nombre', 'VARCHAR(255)'))))
+                        Empleado.value('@Nombre', 'VARCHAR(255)'),
+                        LEN(Empleado.value('@Nombre', 'VARCHAR(255)'))
+                            - CHARINDEX(' ', REVERSE(RTRIM(Empleado.value('@Nombre', 'VARCHAR(255)'))))
                     )
-                    ELSE n.value('@Nombre', 'VARCHAR(255)')
+                    ELSE Empleado.value('@Nombre', 'VARCHAR(255)')
                   END
                 , CASE
-                    WHEN CHARINDEX(' ', RTRIM(n.value('@Nombre', 'VARCHAR(255)'))) > 0
+                    WHEN CHARINDEX(' ', RTRIM(Empleado.value('@Nombre', 'VARCHAR(255)'))) > 0
                     THEN RIGHT(
-                        n.value('@Nombre', 'VARCHAR(255)'),
-                        CHARINDEX(' ', REVERSE(RTRIM(n.value('@Nombre', 'VARCHAR(255)')))) - 1
+                        Empleado.value('@Nombre', 'VARCHAR(255)'),
+                        CHARINDEX(' ', REVERSE(RTRIM(Empleado.value('@Nombre', 'VARCHAR(255)')))) - 1
                     )
                     ELSE ''
                   END
-                , TRY_CAST(n.value('@FechaContratacion', 'NVARCHAR(20)') AS DATE)
+                , ISNULL(
+                    TRY_CAST(Empleado.value('@FechaContratacion', 'NVARCHAR(20)') AS DATE),
+                    CAST(GETDATE() AS DATE)
+                  )
                 , NULL
                 , (SELECT p.id FROM dbo.Puesto p
-                   WHERE p.Nombre = n.value('@Puesto', 'VARCHAR(255)'))
+                   WHERE p.Nombre = Empleado.value('@Puesto', 'VARCHAR(255)'))
                 , 1
             FROM @XmlOperaciones.nodes(
                 '/Operaciones/FechaOperacion[@Fecha=sql:variable("@FechaStr")]/InsertarEmpleado'
-            ) T(n)
+            ) T(Empleado)
             WHERE NOT EXISTS (
                 SELECT 1 FROM dbo.Empleado e2
-                WHERE e2.Cedula = n.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
+                WHERE e2.Cedula = Empleado.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
             );
 
             -- ---------------------------------------------------------------
@@ -274,10 +290,10 @@ BEGIN
             UPDATE dbo.Empleado
             SET Activo = 0
             WHERE Cedula IN (
-                SELECT n.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
+                SELECT Empleado.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
                 FROM @XmlOperaciones.nodes(
                     '/Operaciones/FechaOperacion[@Fecha=sql:variable("@FechaStr")]/EliminaEmpleado'
-                ) T(n)
+                ) T(Empleado)
             );
 
             -- ---------------------------------------------------------------
@@ -296,21 +312,21 @@ BEGIN
                 e.id
                 , td.id
                 , CASE
-                    WHEN TRY_CAST(n.value('@MontoFijo', 'NVARCHAR(20)') AS DECIMAL(10,4)) = 0
+                    WHEN TRY_CAST(Deduccion.value('@MontoFijo', 'NVARCHAR(20)') AS DECIMAL(10,4)) = 0
                     THEN td.Valor
-                    ELSE TRY_CAST(n.value('@MontoFijo', 'NVARCHAR(20)') AS DECIMAL(10,4))
+                    ELSE TRY_CAST(Deduccion.value('@MontoFijo', 'NVARCHAR(20)') AS DECIMAL(10,4))
                   END
                 , @FechaInicioDeduccion
                 , NULL
                 , 1
             FROM @XmlOperaciones.nodes(
                 '/Operaciones/FechaOperacion[@Fecha=sql:variable("@FechaStr")]/AsociaEmpleadoConDeduccion'
-            ) T(n)
+            ) T(Deduccion)
             INNER JOIN dbo.Empleado e
-                ON e.Cedula = n.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
+                ON e.Cedula = Deduccion.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
                 AND e.Activo = 1
             INNER JOIN dbo.TipoDeduccion td
-                ON td.Nombre = n.value('@TipoDeduccion', 'VARCHAR(100)')
+                ON td.Nombre = Deduccion.value('@TipoDeduccion', 'VARCHAR(100)')
             WHERE NOT EXISTS (
                 SELECT 1 FROM dbo.EmpXTipoDed etd2
                 WHERE etd2.idEmpleado = e.id
@@ -334,9 +350,9 @@ BEGIN
                 SELECT 1
                 FROM @XmlOperaciones.nodes(
                     '/Operaciones/FechaOperacion[@Fecha=sql:variable("@FechaStr")]/DesasociaEmpleadoConDeduccion'
-                ) T(n)
-                WHERE e.Cedula  = n.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
-                  AND td.Nombre = n.value('@TipoDeduccion', 'VARCHAR(100)')
+                ) T(Deduccion)
+                WHERE e.Cedula  = Deduccion.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
+                  AND td.Nombre = Deduccion.value('@TipoDeduccion', 'VARCHAR(100)')
             );
 
             -- ---------------------------------------------------------------
@@ -353,14 +369,14 @@ BEGIN
                 , 0
             FROM @XmlOperaciones.nodes(
                 '/Operaciones/FechaOperacion[@Fecha=sql:variable("@FechaStr")]/AsignarJornada'
-            ) T(n)
+            ) T(Semana)
             INNER JOIN dbo.Empleado e
-                ON e.Cedula = n.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
+                ON e.Cedula = Semana.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
                 AND e.Activo = 1
             INNER JOIN dbo.TipoJornada tj
-                ON tj.Nombre = n.value('@Jornada', 'VARCHAR(50)')
+                ON tj.Nombre = Semana.value('@Jornada', 'VARCHAR(50)')
             INNER JOIN dbo.Semana s
-                ON s.FechaInicio = TRY_CAST(n.value('@InicioSemana', 'NVARCHAR(20)') AS DATE)
+                ON s.FechaInicio = TRY_CAST(Semana.value('@InicioSemana', 'NVARCHAR(20)') AS DATE)
             CROSS JOIN (VALUES (1),(2),(3),(4),(5),(6),(7)) d(DiaSemana)
             WHERE NOT EXISTS (
                 SELECT 1 FROM dbo.HorarioJornada hj2
@@ -370,27 +386,30 @@ BEGIN
             );
 
             -- ---------------------------------------------------------------
-            -- MarcaAsistencia: carga en temp table y procesa con cursor
+            -- MarcaAsistencia: cargar registros del dia y procesar fila a fila
             -- ---------------------------------------------------------------
             TRUNCATE TABLE #TempAsist;
 
             INSERT INTO #TempAsist (Cedula, Entrada, Salida)
             SELECT
-                n.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
-                , n.value('@HoraEntrada', 'NVARCHAR(20)')
-                , n.value('@HoraSalida',  'NVARCHAR(20)')
+                Asistencia.value('@ValorDocumentoIdentidad', 'VARCHAR(20)')
+                , Asistencia.value('@HoraEntrada', 'NVARCHAR(20)')
+                , Asistencia.value('@HoraSalida',  'NVARCHAR(20)')
             FROM @XmlOperaciones.nodes(
                 '/Operaciones/FechaOperacion[@Fecha=sql:variable("@FechaStr")]/MarcaAsistencia'
-            ) T(n);
+            ) T(Asistencia);
 
-            DECLARE cAsist CURSOR LOCAL FAST_FORWARD FOR
-                SELECT Cedula, Entrada, Salida FROM #TempAsist;
+            SET @AsistRow = 1;
+            SELECT @MaxAsistRow = ISNULL(MAX(Id), 0) FROM #TempAsist;
 
-            OPEN cAsist;
-            FETCH NEXT FROM cAsist INTO @cedula, @dtEntradaStr, @dtSalidaStr;
-
-            WHILE @@FETCH_STATUS = 0
+            WHILE @AsistRow <= @MaxAsistRow
             BEGIN
+                SELECT
+                    @cedula       = Cedula
+                    , @dtEntradaStr = Entrada
+                    , @dtSalidaStr  = Salida
+                FROM #TempAsist WHERE Id = @AsistRow;
+
                 SET @dtEntrada = TRY_CAST(@dtEntradaStr AS DATETIME);
                 SET @dtSalida  = TRY_CAST(@dtSalidaStr  AS DATETIME);
                 SET @idEmp     = NULL;
@@ -552,11 +571,9 @@ BEGIN
                     END
                 END
 
-                FETCH NEXT FROM cAsist INTO @cedula, @dtEntradaStr, @dtSalidaStr;
+                SET @AsistRow = @AsistRow + 1;
             END
-
-            CLOSE cAsist;
-            DEALLOCATE cAsist;
+            -- Fin WHILE asistencia
 
             -- ---------------------------------------------------------------
             -- Jueves: cierre de semana — aplicar deducciones a cada empleado
@@ -579,21 +596,24 @@ BEGIN
                 SET @lastDayISO    = (DATEPART(dw, @lastDayMes) + @@DATEFIRST - 2) % 7 + 1;
                 SET @lastJuevesMes = DATEADD(DAY, -((@lastDayISO - 4 + 7) % 7), @lastDayMes);
 
-                SET @prevLastDay      = DATEADD(DAY, -1, DATEFROMPARTS(@MesAno, @MesNumero, 1));
-                SET @prevLastDayISO   = (DATEPART(dw, @prevLastDay) + @@DATEFIRST - 2) % 7 + 1;
-                SET @monthPayStart    = DATEADD(DAY, -((@prevLastDayISO - 5 + 7) % 7), @prevLastDay);
+                SET @prevLastDay    = DATEADD(DAY, -1, DATEFROMPARTS(@MesAno, @MesNumero, 1));
+                SET @prevLastDayISO = (DATEPART(dw, @prevLastDay) + @@DATEFIRST - 2) % 7 + 1;
+                SET @monthPayStart  = DATEADD(DAY, -((@prevLastDayISO - 5 + 7) % 7), @prevLastDay);
 
                 SET @numJueves = (DATEDIFF(DAY, @monthPayStart, @lastJuevesMes) + 1) / 7;
                 IF @numJueves < 1 SET @numJueves = 4;
 
-                DECLARE cClose CURSOR LOCAL FAST_FORWARD FOR
-                    SELECT idEmp, idPlanilla, idPlanillaSem FROM #TempClose;
+                SET @CloseRow = 1;
+                SELECT @MaxCloseRow = ISNULL(MAX(Id), 0) FROM #TempClose;
 
-                OPEN cClose;
-                FETCH NEXT FROM cClose INTO @idEmpClose, @idPlanillaClose, @idPlanillaSemClose;
-
-                WHILE @@FETCH_STATUS = 0
+                WHILE @CloseRow <= @MaxCloseRow
                 BEGIN
+                    SELECT
+                        @idEmpClose         = idEmp
+                        , @idPlanillaClose    = idPlanilla
+                        , @idPlanillaSemClose = idPlanillaSem
+                    FROM #TempClose WHERE Id = @CloseRow;
+
                     SELECT @ingresoBruto = IngresoBruto
                     FROM dbo.Planilla WHERE id = @idPlanillaClose;
 
@@ -688,37 +708,29 @@ BEGIN
 
                     -- Acumular en planilla mensual
                     UPDATE dbo.Planilla
-                    SET IngresoBruto    = IngresoBruto    + @ingresoBruto
+                    SET IngresoBruto     = IngresoBruto     + @ingresoBruto
                       , TotalDeducciones = TotalDeducciones + @totalDed
                     WHERE id = @idPlanillaMens;
 
-                    FETCH NEXT FROM cClose INTO @idEmpClose, @idPlanillaClose, @idPlanillaSemClose;
+                    SET @CloseRow = @CloseRow + 1;
                 END
-
-                CLOSE cClose;
-                DEALLOCATE cClose;
+                -- Fin WHILE cierre
             END
             -- Fin bloque jueves
 
             COMMIT TRANSACTION;
 
-            FETCH NEXT FROM cDates INTO @FechaActual;
+            SET @CurrentDateRow = @CurrentDateRow + 1;
         END
         -- Fin WHILE fechas
 
-        CLOSE cDates;
-        DEALLOCATE cDates;
-
+        DROP TABLE #TempDates;
         DROP TABLE #TempAsist;
         DROP TABLE #TempClose;
 
     END TRY
     BEGIN CATCH
-        -- Limpiar cursores si quedaron abiertos
-        IF CURSOR_STATUS('local', 'cDates')  >= 0 BEGIN CLOSE cDates;  DEALLOCATE cDates;  END
-        IF CURSOR_STATUS('local', 'cAsist')  >= 0 BEGIN CLOSE cAsist;  DEALLOCATE cAsist;  END
-        IF CURSOR_STATUS('local', 'cClose')  >= 0 BEGIN CLOSE cClose;  DEALLOCATE cClose;  END
-
+        IF OBJECT_ID('tempdb..#TempDates') IS NOT NULL DROP TABLE #TempDates;
         IF OBJECT_ID('tempdb..#TempAsist') IS NOT NULL DROP TABLE #TempAsist;
         IF OBJECT_ID('tempdb..#TempClose') IS NOT NULL DROP TABLE #TempClose;
 
@@ -749,181 +761,261 @@ GO
 -- ===========================================================================
 DECLARE @myXml XML = N'
 <Operaciones>
-    <FechaOperacion Fecha="2026-04-30">
-        <InsertarEmpleado ValorDocumentoIdentidad="110011001" Nombre="Carlos Mendoza"
-            Puesto="Electricista" CuentaBancaria="CR2415115201001026284066"
-            FechaContratacion="2026-05-01"/>
-        <InsertarEmpleado ValorDocumentoIdentidad="305827920" Nombre="Ana Rodriguez"
-            Puesto="Cajero" CuentaBancaria="CR2415115201901026284067"
-            FechaContratacion="2026-05-01"/>
-        <InsertarEmpleado ValorDocumentoIdentidad="194739285" Nombre="Nicolas Vargas"
-            Puesto="Conductor" CuentaBancaria="CR2415115201901026392748"
-            FechaContratacion="2026-05-01"/>
+<!--
+======================================================
+Jueves 2026-04-30> Insercion de empleados y semana 1
+(inicia viernes 2026-05-01), Dia del trabajo
+======================================================
+-->
+<FechaOperacion Fecha="2026-04-30">
+    <InsertarEmpleado ValorDocumentoIdentidad="110011001" Nombre="Carlos Mendoza"
+        Puesto="Electricista" CuentaBancaria="CR2415115201001026284066"
+        FechaContratacion="2026-05-01"/>
+    <InsertarEmpleado ValorDocumentoIdentidad="305827920" Nombre="Ana Rodriguez"
+        Puesto="Cajero" CuentaBancaria="CR2415115201901026284067"/>
+    <InsertarEmpleado ValorDocumentoIdentidad="194739285" Nombre="Nicolas Vargas"
+        Puesto="Conductor" CuentaBancaria="CR2415115201901026392748"/>
 
-        <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="110011001"
-            TipoDeduccion="Ahorro Asociacion Solidarista" MontoFijo="0.00"/>
-        <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="305827920"
-            TipoDeduccion="Pension Alimenticia" MontoFijo="50000.00"/>
+    <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="110011001"
+        TipoDeduccion="Ahorro Asociacion Solidarista" MontoFijo="0.00"/>
+    <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="305827920"
+        TipoDeduccion="Pension Alimenticia" MontoFijo="50000.00"/>
 
-        <AsignarJornada ValorDocumentoIdentidad="110011001" Jornada="Diurno"
-            InicioSemana="2026-05-01"/>
-        <AsignarJornada ValorDocumentoIdentidad="305827920" Jornada="Vespertino"
-            InicioSemana="2026-05-01"/>
-        <AsignarJornada ValorDocumentoIdentidad="194739285" Jornada="Nocturno"
-            InicioSemana="2026-05-01"/>
-    </FechaOperacion>
+    <AsignarJornada ValorDocumentoIdentidad="110011001" Jornada="Diurno"
+        InicioSemana="2026-05-01"/>
+    <AsignarJornada ValorDocumentoIdentidad="305827920" Jornada="Vespertino"
+        InicioSemana="2026-05-01"/>
+    <AsignarJornada ValorDocumentoIdentidad="194739285" Jornada="Nocturno"
+        InicioSemana="2026-05-01"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-01">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-01 06:00" HoraSalida="2026-05-01 16:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-01 14:00" HoraSalida="2026-05-02 01:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-01 22:00" HoraSalida="2026-05-02 08:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-01"> <!-- Viernes y Feriado -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-01 06:00"
+        HoraSalida="2026-05-01 16:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-01 14:00"
+        HoraSalida="2026-05-02 01:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-01 22:00"
+        HoraSalida="2026-05-02 08:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-02">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-02 06:00" HoraSalida="2026-05-02 14:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-02 14:00" HoraSalida="2026-05-02 22:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-02 22:00" HoraSalida="2026-05-03 06:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-02"> <!-- Sabado -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-02 06:00"
+        HoraSalida="2026-05-02 14:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-02 14:00"
+        HoraSalida="2026-05-02 22:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-02 22:00"
+        HoraSalida="2026-05-03 06:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-03">
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-03 14:00" HoraSalida="2026-05-03 22:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-03 22:00" HoraSalida="2026-05-04 06:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-03"> <!-- Domingo -->
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-03 14:00"
+        HoraSalida="2026-05-03 22:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-03 22:00"
+        HoraSalida="2026-05-04 6:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-04">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-04 06:00" HoraSalida="2026-05-04 14:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-04 14:00" HoraSalida="2026-05-04 22:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-04 22:00" HoraSalida="2026-05-05 08:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-04"> <!-- Lunes -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-04 06:00"
+        HoraSalida="2026-05-04 14:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-04 14:00"
+        HoraSalida="2026-05-04 22:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-04 22:00"
+        HoraSalida="2026-05-05 08:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-05">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-05 06:00" HoraSalida="2026-05-05 14:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-05 14:00" HoraSalida="2026-05-05 22:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-05 22:00" HoraSalida="2026-05-06 06:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-05"> <!-- Martes -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-05 06:00"
+        HoraSalida="2026-05-05 14:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-05 14:00"
+        HoraSalida="2026-05-05 22:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-05 22:00"
+        HoraSalida="2026-05-06 06:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-06">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-06 06:00" HoraSalida="2026-05-06 14:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-06 14:00" HoraSalida="2026-05-07 00:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-06 22:00" HoraSalida="2026-05-07 06:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-06"> <!-- Miercoles -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-06 06:00"
+        HoraSalida="2026-05-06 14:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-06 14:00"
+        HoraSalida="2026-05-07 00:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-06 22:00"
+        HoraSalida="2026-05-07 06:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-07">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-07 06:00" HoraSalida="2026-05-07 14:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-07 14:00" HoraSalida="2026-05-07 22:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-07 22:00" HoraSalida="2026-05-08 06:00"/>
+<FechaOperacion Fecha="2026-05-07"> <!-- Jueves -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-07 06:00"
+        HoraSalida="2026-05-07 14:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-07 14:00"
+        HoraSalida="2026-05-07 22:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-07 22:00"
+        HoraSalida="2026-05-08 06:00"/>
 
-        <AsignarJornada ValorDocumentoIdentidad="110011001" Jornada="Vespertino" InicioSemana="2026-05-08"/>
-        <AsignarJornada ValorDocumentoIdentidad="305827920" Jornada="Nocturno"   InicioSemana="2026-05-08"/>
-        <AsignarJornada ValorDocumentoIdentidad="194739285" Jornada="Diurno"     InicioSemana="2026-05-08"/>
+    <!-- Cierre de semana 1 e inicio de semana 2 (inicia viernes 2026-05-08) -->
+    <AsignarJornada ValorDocumentoIdentidad="110011001" Jornada="Vespertino"
+        InicioSemana="2026-05-08"/>
+    <AsignarJornada ValorDocumentoIdentidad="305827920" Jornada="Nocturno"
+        InicioSemana="2026-05-08"/>
+    <AsignarJornada ValorDocumentoIdentidad="194739285" Jornada="Diurno"
+        InicioSemana="2026-05-08"/>
 
-        <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="305827920"
-            TipoDeduccion="Ahorro Vacacional" MontoFijo="25000.00"/>
-    </FechaOperacion>
+    <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="305827920"
+        TipoDeduccion="Ahorro Vacacional" MontoFijo="25000.00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-08">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-08 14:00" HoraSalida="2026-05-08 22:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-08 22:00" HoraSalida="2026-05-09 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-08 06:00" HoraSalida="2026-05-08 14:00"/>
-    </FechaOperacion>
+<!-- Semana 2-->
+<FechaOperacion Fecha="2026-05-08"> <!-- Viernes -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-08 14:00"
+        HoraSalida="2026-05-08 22:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-08 22:00"
+        HoraSalida="2026-05-09 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-08 06:00"
+        HoraSalida="2026-05-08 14:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-09">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-09 14:00" HoraSalida="2026-05-09 22:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-09 22:00" HoraSalida="2026-05-10 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-09 06:00" HoraSalida="2026-05-09 14:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-09"> <!-- Sabado -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-09 14:00"
+        HoraSalida="2026-05-09 22:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-09 22:00"
+        HoraSalida="2026-05-10 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-09 06:00"
+        HoraSalida="2026-05-09 14:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-10">
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-10 22:00" HoraSalida="2026-05-11 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-10 06:00" HoraSalida="2026-05-10 14:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-10"> <!-- Domingo -->
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-10 22:00"
+        HoraSalida="2026-05-11 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-10 06:00"
+        HoraSalida="2026-05-10 14:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-11">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-11 14:00" HoraSalida="2026-05-11 22:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-11 06:00" HoraSalida="2026-05-11 14:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-11"> <!-- Lunes -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-11 14:00"
+        HoraSalida="2026-05-11 22:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-11 06:00"
+        HoraSalida="2026-05-11 14:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-12">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-12 14:00" HoraSalida="2026-05-12 22:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-12 22:00" HoraSalida="2026-05-13 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-12 06:00" HoraSalida="2026-05-12 14:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-12"> <!-- Martes -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-12 14:00"
+        HoraSalida="2026-05-12 22:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-12 22:00"
+        HoraSalida="2026-05-13 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-12 06:00"
+        HoraSalida="2026-05-12 14:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-13">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-13 14:00" HoraSalida="2026-05-13 22:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-13 22:00" HoraSalida="2026-05-14 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-13 06:00" HoraSalida="2026-05-13 14:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-13"> <!-- Miercoles -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-13 14:00"
+        HoraSalida="2026-05-13 22:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-13 22:00"
+        HoraSalida="2026-05-14 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-13 06:00"
+        HoraSalida="2026-05-13 14:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-14">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-14 14:00" HoraSalida="2026-05-14 22:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-14 22:00" HoraSalida="2026-05-15 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-14 06:00" HoraSalida="2026-05-14 14:00"/>
+<FechaOperacion Fecha="2026-05-14"> <!-- Jueves -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-14 14:00"
+        HoraSalida="2026-05-14 22:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-14 22:00"
+        HoraSalida="2026-05-15 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-14 06:00"
+        HoraSalida="2026-05-14 14:00"/>
 
-        <AsignarJornada ValorDocumentoIdentidad="110011001" Jornada="Nocturno"   InicioSemana="2026-05-15"/>
-        <AsignarJornada ValorDocumentoIdentidad="305827920" Jornada="Diurno"     InicioSemana="2026-05-15"/>
-        <AsignarJornada ValorDocumentoIdentidad="194739285" Jornada="Vespertino" InicioSemana="2026-05-15"/>
+    <!-- Cierre de semana 2 e inicio de semana 3 (inicia viernes 2026-05-15) -->
+    <AsignarJornada ValorDocumentoIdentidad="110011001" Jornada="Nocturno"
+        InicioSemana="2026-05-15"/>
+    <AsignarJornada ValorDocumentoIdentidad="305827920" Jornada="Diurno"
+        InicioSemana="2026-05-15"/>
+    <AsignarJornada ValorDocumentoIdentidad="194739285" Jornada="Vespertino"
+        InicioSemana="2026-05-15"/>
 
-        <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="110011001"
-            TipoDeduccion="Ahorro Vacacional" MontoFijo="15000.00"/>
-        <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="194739285"
-            TipoDeduccion="Ahorro Asociacion Solidarista" MontoFijo="0.00"/>
+    <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="110011001"
+        TipoDeduccion="Ahorro Vacacional" MontoFijo="15000.00"/>
+    <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="194739285"
+        TipoDeduccion="Ahorro Asociacion Solidarista" MontoFijo="0.00"/>
 
-        <DesasociaEmpleadoConDeduccion ValorDocumentoIdentidad="194739285"
-            TipoDeduccion="Pension Alimenticia"/>
-    </FechaOperacion>
+    <DesasociaEmpleadoConDeduccion ValorDocumentoIdentidad="194739285"
+        TipoDeduccion="Pension Alimenticia"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-15">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-15 22:00" HoraSalida="2026-05-16 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-15 06:00" HoraSalida="2026-05-15 14:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-15 14:00" HoraSalida="2026-05-15 22:00"/>
-    </FechaOperacion>
+<!-- Semana 3 -->
+<FechaOperacion Fecha="2026-05-15"> <!-- Viernes -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-15 22:00"
+        HoraSalida="2026-05-16 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-15 06:00"
+        HoraSalida="2026-05-15 14:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-15 14:00"
+        HoraSalida="2026-05-15 22:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-16">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-16 22:00" HoraSalida="2026-05-17 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-16 06:00" HoraSalida="2026-05-16 14:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-16 14:00" HoraSalida="2026-05-16 22:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-16"> <!-- Sabado -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-16 22:00"
+        HoraSalida="2026-05-17 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-16 06:00"
+        HoraSalida="2026-05-16 14:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-16 14:00"
+        HoraSalida="2026-05-16 22:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-17">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-17 22:00" HoraSalida="2026-05-18 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-17 06:00" HoraSalida="2026-05-17 14:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-17 14:00" HoraSalida="2026-05-17 22:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-17"> <!-- Domingo -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-17 22:00"
+        HoraSalida="2026-05-18 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-17 06:00"
+        HoraSalida="2026-05-17 14:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-17 14:00"
+        HoraSalida="2026-05-17 22:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-18">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-18 22:00" HoraSalida="2026-05-19 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-18 06:00" HoraSalida="2026-05-18 14:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-18 14:00" HoraSalida="2026-05-18 22:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-18"> <!-- Lunes -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-18 22:00"
+        HoraSalida="2026-05-19 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-18 06:00"
+        HoraSalida="2026-05-18 14:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-18 14:00"
+        HoraSalida="2026-05-18 22:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-19">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-19 22:00" HoraSalida="2026-05-20 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-19 06:00" HoraSalida="2026-05-19 14:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-19 14:00" HoraSalida="2026-05-19 22:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-19"> <!-- Martes -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-19 22:00"
+        HoraSalida="2026-05-20 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-19 06:00"
+        HoraSalida="2026-05-19 14:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-19 14:00"
+        HoraSalida="2026-05-19 22:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-20">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-20 22:00" HoraSalida="2026-05-21 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-20 06:00" HoraSalida="2026-05-20 14:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-20 14:00" HoraSalida="2026-05-20 22:00"/>
-    </FechaOperacion>
+<FechaOperacion Fecha="2026-05-20"> <!-- Miercoles -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-20 22:00"
+        HoraSalida="2026-05-21 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-20 06:00"
+        HoraSalida="2026-05-20 14:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-20 14:00"
+        HoraSalida="2026-05-20 22:00"/>
+</FechaOperacion>
 
-    <FechaOperacion Fecha="2026-05-21">
-        <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-21 22:00" HoraSalida="2026-05-22 06:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-21 06:00" HoraSalida="2026-05-21 14:00"/>
-        <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-21 14:00" HoraSalida="2026-05-21 22:00"/>
+<FechaOperacion Fecha="2026-05-21"> <!-- Jueves -->
+    <MarcaAsistencia ValorDocumentoIdentidad="110011001" HoraEntrada="2026-05-21 22:00"
+        HoraSalida="2026-05-22 06:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="305827920" HoraEntrada="2026-05-21 06:00"
+        HoraSalida="2026-05-21 14:00"/>
+    <MarcaAsistencia ValorDocumentoIdentidad="194739285" HoraEntrada="2026-05-21 14:00"
+        HoraSalida="2026-05-21 22:00"/>
 
-        <AsignarJornada ValorDocumentoIdentidad="110011001" Jornada="Diurno"     InicioSemana="2026-05-22"/>
-        <AsignarJornada ValorDocumentoIdentidad="305827920" Jornada="Vespertino" InicioSemana="2026-05-22"/>
-        <AsignarJornada ValorDocumentoIdentidad="194739285" Jornada="Nocturno"   InicioSemana="2026-05-22"/>
+    <!-- Cierre de semana 3 e inicio de semana 4 (inicia viernes 2026-05-22) -->
+    <AsignarJornada ValorDocumentoIdentidad="110011001" Jornada="Diurno"
+        InicioSemana="2026-05-22"/>
+    <AsignarJornada ValorDocumentoIdentidad="305827920" Jornada="Vespertino"
+        InicioSemana="2026-05-22"/>
+    <AsignarJornada ValorDocumentoIdentidad="194739285" Jornada="Nocturno"
+        InicioSemana="2026-05-22"/>
 
-        <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="305827920"
-            TipoDeduccion="Pension Alimenticia" MontoFijo="30000.00"/>
+    <AsociaEmpleadoConDeduccion ValorDocumentoIdentidad="305827920"
+        TipoDeduccion="Pension Alimenticia" MontoFijo="30000.00"/>
 
-        <DesasociaEmpleadoConDeduccion ValorDocumentoIdentidad="110011001"
-            TipoDeduccion="Ahorro Asociacion Solidarista"/>
-    </FechaOperacion>
+    <DesasociaEmpleadoConDeduccion ValorDocumentoIdentidad="110011001"
+        TipoDeduccion="Ahorro Asociacion Solidarista"/>
+</FechaOperacion>
+
+
 </Operaciones>';
 
 EXEC dbo.SP_ProcesarFechaOperacion @XmlOperaciones = @myXml;

@@ -8,8 +8,8 @@ stored_procedures_dir = base_dir / "stored_procedures"
 source_files = [
 	base_dir / "init_db.sql",
 	*sorted(stored_procedures_dir.glob("*.sql")),
-	base_dir / "load_datos.sql",
 	base_dir / "triggers.sql",
+	base_dir / "load_datos.sql",
 	base_dir / "load_operaciones.sql",
 ]
 
