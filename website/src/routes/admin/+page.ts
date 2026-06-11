@@ -9,8 +9,8 @@ export function load() {
 	if (!browser) return {};
 
 	const auth = get(authStore);
-	if (!auth) throw redirect(302, '/login');
-	if (auth.user.role.toLowerCase() !== 'administrador') throw redirect(302, '/empleado');
+	if (!auth) throw redirect(302, '/');
+	if (auth.user.role.toLowerCase() !== 'administrador') throw redirect(302, '/');
 
 	return {};
 }
