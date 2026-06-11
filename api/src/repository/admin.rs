@@ -48,6 +48,10 @@ pub async fn editar_empleado(
     Ok(state.db.call(Procedure::EditarEmpleado, params).await?)
 }
 
+pub async fn obtener_horario_empleado_semana(state: &AppState, id: i32) -> ApiResult<Vec<Value>> {
+    Ok(state.db.call(Procedure::ObtenerHorarioEmpleadoSemana, vec![DbParam::I32(id)]).await?)
+}
+
 pub async fn eliminar_empleado(state: &AppState, id: i32) -> ApiResult<Vec<Value>> {
     Ok(state
         .db

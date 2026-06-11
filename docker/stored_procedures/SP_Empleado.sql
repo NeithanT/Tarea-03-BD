@@ -101,7 +101,7 @@ GO
 
 CREATE PROCEDURE dbo.SP_Empleado_ObtenerPorId
     @inId INT
-    , @outResultCode INT OUTPUT
+    , @outResultCode INT = NULL OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;

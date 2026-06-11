@@ -1,6 +1,6 @@
 import { PUBLIC_API_URL } from '$env/static/public';
 import { authStore } from '$lib/auth';
-import type { AuthState, Empleado, EmpleadoDetalle, EmpleadoPayload, Puesto } from '$lib/types';
+import type { AuthState, Empleado, EmpleadoDetalle, EmpleadoPayload, HorarioDia, Puesto } from '$lib/types';
 
 const BASE = PUBLIC_API_URL;
 
@@ -81,6 +81,11 @@ export async function editarEmpleado(id: number, payload: EmpleadoPayload): Prom
 
 export async function listarPuestos(): Promise<Puesto[]> {
 	const res = await request<{ data: Puesto[] }>('/api/admin/puestos');
+	return res.data;
+}
+
+export async function obtenerHorarioEmpleado(id: number): Promise<HorarioDia[]> {
+	const res = await request<{ data: HorarioDia[] }>(`/api/admin/empleados/${id}/horario`);
 	return res.data;
 }
 

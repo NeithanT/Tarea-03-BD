@@ -16,6 +16,7 @@ pub enum Procedure {
     ObtenerDetalleDeduccionesMensuales,
     CargarCatalogosXml,
     ProcesarFechaOperacion,
+    ObtenerHorarioEmpleadoSemana,
 }
 
 impl Procedure {
@@ -37,6 +38,7 @@ impl Procedure {
             Self::ObtenerDetalleDeduccionesMensuales => "SP_ObtenerDetalleDeduccionesMensuales",
             Self::CargarCatalogosXml => "SP_CargarCatalogosXML",
             Self::ProcesarFechaOperacion => "SP_ProcesarFechaOperacion",
+            Self::ObtenerHorarioEmpleadoSemana => "SP_ObtenerHorarioEmpleadoSemana",
         }
     }
 
