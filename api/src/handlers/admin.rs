@@ -78,7 +78,7 @@ pub async fn listar_empleados(
     )
     .await
     {
-        eprintln!("[WARN] audit::listar_empleados: {e}");
+        eprintln!("[WARN] audit::listar_empleados: {e:?}");
     }
 
     Ok(Json(json!({ "data": data })))
@@ -108,7 +108,7 @@ pub async fn buscar_empleados(
     )
     .await
     {
-        eprintln!("[WARN] audit::buscar_empleados: {e}");
+        eprintln!("[WARN] audit::buscar_empleados: {e:?}");
     }
 
     Ok(Json(json!({ "data": data })))
