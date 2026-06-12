@@ -221,8 +221,8 @@ CREATE TABLE dbo.MovPlanilla (
   , idPlanillaSemanal INT NOT NULL
   , idAsistencia INT NULL
   , idTipoMovimiento INT NOT NULL
-  , Cantidad DECIMAL(5, 2) NULL
-  , Monto DECIMAL(10, 2) NOT NULL
+  , Monto DECIMAL(5, 2) NULL
+  , NuevoSaldo DECIMAL(10, 2) NOT NULL
   , Fecha DATE NOT NULL
   , CONSTRAINT FK_MovPlanilla_PlanillaSemanal FOREIGN KEY (idPlanillaSemanal) REFERENCES dbo.PlanillaSemanal(id)
   , CONSTRAINT FK_MovPlanilla_Asistencia FOREIGN KEY (idAsistencia) REFERENCES dbo.AsistenciaAJornada(id)

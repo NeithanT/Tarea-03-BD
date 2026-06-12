@@ -528,7 +528,7 @@ BEGIN
                         BEGIN
                             INSERT INTO dbo.MovPlanilla (
                                 idPlanillaSemanal, idAsistencia, idTipoMovimiento
-                                , Cantidad, Monto, Fecha
+                                , Monto, NuevoSaldo, Fecha
                             )
                             VALUES (
                                 @idPlanillaSem, @idAsistencia, @tmOrdinario
@@ -543,7 +543,7 @@ BEGIN
                         BEGIN
                             INSERT INTO dbo.MovPlanilla (
                                 idPlanillaSemanal, idAsistencia, idTipoMovimiento
-                                , Cantidad, Monto, Fecha
+                                , Monto, NuevoSaldo, Fecha
                             )
                             VALUES (
                                 @idPlanillaSem, @idAsistencia, @tmExtraNorm
@@ -558,7 +558,7 @@ BEGIN
                         BEGIN
                             INSERT INTO dbo.MovPlanilla (
                                 idPlanillaSemanal, idAsistencia, idTipoMovimiento
-                                , Cantidad, Monto, Fecha
+                                , Monto, NuevoSaldo, Fecha
                             )
                             VALUES (
                                 @idPlanillaSem, @idAsistencia, @tmExtraDoble
@@ -621,7 +621,7 @@ BEGIN
 
                     -- Deducciones porcentuales (sobre el salario bruto semanal)
                     INSERT INTO dbo.MovPlanilla (
-                        idPlanillaSemanal, idAsistencia, idTipoMovimiento, Cantidad, Monto, Fecha
+                        idPlanillaSemanal, idAsistencia, idTipoMovimiento, Monto, NuevoSaldo, Fecha
                     )
                     SELECT
                         @idPlanillaSemClose
@@ -651,7 +651,7 @@ BEGIN
 
                     -- Deducciones fijas no obligatorias (monto mensual / numJueves)
                     INSERT INTO dbo.MovPlanilla (
-                        idPlanillaSemanal, idAsistencia, idTipoMovimiento, Cantidad, Monto, Fecha
+                        idPlanillaSemanal, idAsistencia, idTipoMovimiento, Monto, NuevoSaldo, Fecha
                     )
                     SELECT
                         @idPlanillaSemClose
