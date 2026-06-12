@@ -65,5 +65,5 @@ pub async fn write_event(
         )
         .await
         .map(|_| ())
-        .map_err(|error| ApiError::Database(format!("no se pudo registrar bitacora: {error}")))
+        .map_err(|error| ApiError::Database(format!("no se pudo registrar bitacora: {error:#}")))
 }

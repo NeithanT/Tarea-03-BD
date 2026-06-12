@@ -30,18 +30,21 @@ BEGIN
         WHERE (e.Activo = 1)
         ORDER BY e.Nombre, e.Apellido;
 
-        INSERT INTO dbo.BitacoraEvento (
-            idUsuario
-            , idTipoEvento
-            , IP
-            , Datos
-        )
-        VALUES (
-            @inIdAdmin
-            , @idTipoEvento
-            , @inIp
-            , 'Listado de empleados'
-        );
+        IF (@idTipoEvento IS NOT NULL)
+        BEGIN
+            INSERT INTO dbo.BitacoraEvento (
+                idUsuario
+                , idTipoEvento
+                , IP
+                , Datos
+            )
+            VALUES (
+                @inIdAdmin
+                , @idTipoEvento
+                , @inIp
+                , 'Listado de empleados'
+            );
+        END
 
     END TRY
     BEGIN CATCH

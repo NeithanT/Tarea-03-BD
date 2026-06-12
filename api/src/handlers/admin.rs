@@ -66,8 +66,8 @@ pub async fn listar_empleados(
     require_admin(&session)?;
 
     let data = repository::admin::listar_empleados(&state, session.user_id, &ip).await?;
- 
-    audit::write_event(
+
+    if let Err(e) = audit::write_event(
         &state,
         Some(session.user_id),
         Some(&session.username),
@@ -76,7 +76,10 @@ pub async fn listar_empleados(
         None,
         &ip,
     )
-    .await?;
+    .await
+    {
+        eprintln!("[WARN] audit::listar_empleados: {e}");
+    }
 
     Ok(Json(json!({ "data": data })))
 }
@@ -94,7 +97,7 @@ pub async fn buscar_empleados(
     let filtro = query.filtro.trim().to_owned();
     let data = repository::admin::listar_empleados_con_filtro(&state, filtro.clone()).await?;
 
-    audit::write_event(
+    if let Err(e) = audit::write_event(
         &state,
         Some(session.user_id),
         Some(&session.username),
@@ -103,7 +106,10 @@ pub async fn buscar_empleados(
         Some(json!({ "filtro": filtro })),
         &ip,
     )
-    .await?;
+    .await
+    {
+        eprintln!("[WARN] audit::buscar_empleados: {e}");
+    }
 
     Ok(Json(json!({ "data": data })))
 }
