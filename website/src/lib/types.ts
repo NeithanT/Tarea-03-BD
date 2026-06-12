@@ -60,3 +60,33 @@ export interface AuthState {
 	token: string;
 	user: SessionUser;
 }
+
+export interface PlanillaSemanal {
+	id: number;
+	FechaInicio: string;
+	FechaFin: string;
+	SalarioBruto: number;
+	TotalDeducciones: number;
+	SalarioNeto: number;
+	HorasOrdinarias: number;
+	HorasExtra: number;
+	HorasExtraDoble: number;
+}
+
+export interface DeduccionSemanal {
+	Nombre: string;
+	Porcentaje: number | null;
+	Monto: number;
+}
+
+export interface AsistenciaSemanal {
+	Fecha: string;
+	HoraEntrada: string | null;
+	HoraSalida: string | null;
+	HorasOrdinarias: number;
+	MontoOrdinario: number;
+	HorasExtra: number;
+	MontoExtra: number;
+	HorasExtraDoble: number;
+	MontoExtraDoble: number;
+}

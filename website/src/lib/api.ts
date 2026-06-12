@@ -1,6 +1,6 @@
 import { PUBLIC_API_URL } from '$env/static/public';
 import { authStore } from '$lib/auth';
-import type { AuthState, Empleado, EmpleadoDetalle, EmpleadoPayload, HorarioDia, Puesto } from '$lib/types';
+import type { AuthState, AsistenciaSemanal, DeduccionSemanal, Empleado, EmpleadoDetalle, EmpleadoPayload, HorarioDia, PlanillaSemanal, Puesto } from '$lib/types';
 
 const BASE = PUBLIC_API_URL;
 
@@ -104,9 +104,19 @@ export async function regresarAdmin(): Promise<void> {
 	await request<void>('/api/empleado/regresar-admin', { method: 'POST' });
 }
 
-export async function planillasSemanales(limit?: number) {
+export async function planillasSemanales(limit?: number): Promise<PlanillaSemanal[]> {
 	const params = limit != null ? `?limit=${limit}` : '';
-	const res = await request<{ data: unknown[] }>(`/api/empleado/planillas-semanales${params}`);
+	const res = await request<{ data: PlanillaSemanal[] }>(`/api/empleado/planillas-semanales${params}`);
+	return res.data;
+}
+
+export async function deduccionesSemanales(id: number): Promise<DeduccionSemanal[]> {
+	const res = await request<{ data: DeduccionSemanal[] }>(`/api/empleado/planillas-semanales/${id}/deducciones`);
+	return res.data;
+}
+
+export async function asistenciasSemanales(id: number): Promise<AsistenciaSemanal[]> {
+	const res = await request<{ data: AsistenciaSemanal[] }>(`/api/empleado/planillas-semanales/${id}/asistencias`);
 	return res.data;
 }
 
