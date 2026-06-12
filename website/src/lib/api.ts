@@ -1,6 +1,17 @@
 import { PUBLIC_API_URL } from '$env/static/public';
 import { authStore } from '$lib/auth';
-import type { AuthState, Empleado, EmpleadoDetalle, EmpleadoPayload, HorarioDia, Puesto } from '$lib/types';
+import type {
+	AsistenciaDetalle,
+	AuthState,
+	DeduccionDetalle,
+	Empleado,
+	EmpleadoDetalle,
+	EmpleadoPayload,
+	HorarioDia,
+	PlanillaMensual,
+	PlanillaSemanal,
+	Puesto
+} from '$lib/types';
 
 const BASE = PUBLIC_API_URL;
 
@@ -104,14 +115,35 @@ export async function regresarAdmin(): Promise<void> {
 	await request<void>('/api/empleado/regresar-admin', { method: 'POST' });
 }
 
-export async function planillasSemanales(limit?: number) {
+export async function planillasSemanales(limit?: number): Promise<PlanillaSemanal[]> {
 	const params = limit != null ? `?limit=${limit}` : '';
-	const res = await request<{ data: unknown[] }>(`/api/empleado/planillas-semanales${params}`);
+	const res = await request<{ data: PlanillaSemanal[] }>(`/api/empleado/planillas-semanales${params}`);
 	return res.data;
 }
 
-export async function planillasMensuales(limit?: number) {
+export async function planillasMensuales(limit?: number): Promise<PlanillaMensual[]> {
 	const params = limit != null ? `?limit=${limit}` : '';
-	const res = await request<{ data: unknown[] }>(`/api/empleado/planillas-mensuales${params}`);
+	const res = await request<{ data: PlanillaMensual[] }>(`/api/empleado/planillas-mensuales${params}`);
+	return res.data;
+}
+
+export async function deduccionesSemanales(idPlanilla: number): Promise<DeduccionDetalle[]> {
+	const res = await request<{ data: DeduccionDetalle[] }>(
+		`/api/empleado/planillas-semanales/${idPlanilla}/deducciones`
+	);
+	return res.data;
+}
+
+export async function asistenciasSemanales(idPlanilla: number): Promise<AsistenciaDetalle[]> {
+	const res = await request<{ data: AsistenciaDetalle[] }>(
+		`/api/empleado/planillas-semanales/${idPlanilla}/asistencias`
+	);
+	return res.data;
+}
+
+export async function deduccionesMensuales(idPlanillaMensual: number): Promise<DeduccionDetalle[]> {
+	const res = await request<{ data: DeduccionDetalle[] }>(
+		`/api/empleado/planillas-mensuales/${idPlanillaMensual}/deducciones`
+	);
 	return res.data;
 }

@@ -1020,3 +1020,45 @@ Jueves 2026-04-30> Insercion de empleados y semana 1
 
 EXEC dbo.SP_ProcesarFechaOperacion @XmlOperaciones = @myXml;
 GO
+
+
+-- ===========================================================================
+-- Crear usuarios de acceso al portal para cada empleado
+-- (se ejecuta despues de la simulacion, cuando los empleados ya existen)
+--   Username  = Cedula del empleado
+--   Contrasena (y hash) = '123' por defecto
+--   Rol       = 'Empleado' (TipoUsuario id = 2)
+-- Idempotente: no duplica usuarios ni vinculos si se vuelve a ejecutar.
+-- ===========================================================================
+
+-- Asegurar el rol 'Empleado' (load_datos solo crea el rol 'Administrador')
+IF NOT EXISTS (SELECT 1 FROM dbo.TipoUsuario WHERE id = 2)
+BEGIN
+    SET IDENTITY_INSERT dbo.TipoUsuario ON;
+    INSERT INTO dbo.TipoUsuario (id, Nombre) VALUES (2, 'Empleado');
+    SET IDENTITY_INSERT dbo.TipoUsuario OFF;
+END
+GO
+
+-- Crear un Usuario por cada empleado que aun no tenga uno asociado
+INSERT INTO dbo.Usuario (
+    Username, Contrasena, NombreUsuario, ContrasenaHash, idRol, Activo
+)
+SELECT
+    e.Cedula, '123', e.Cedula, '123', 2, 1
+FROM dbo.Empleado e
+WHERE NOT EXISTS (SELECT 1 FROM dbo.Usuario u WHERE u.Username = e.Cedula)
+  AND NOT EXISTS (
+      SELECT 1 FROM dbo.UsuarioEmpleado ue WHERE ue.idEmpleado = e.id
+  );
+GO
+
+-- Vincular cada empleado con su usuario (Username = Cedula)
+INSERT INTO dbo.UsuarioEmpleado (idUsuario, idEmpleado)
+SELECT u.id, e.id
+FROM dbo.Empleado e
+INNER JOIN dbo.Usuario u ON u.Username = e.Cedula
+WHERE NOT EXISTS (
+    SELECT 1 FROM dbo.UsuarioEmpleado ue WHERE ue.idEmpleado = e.id
+);
+GO
