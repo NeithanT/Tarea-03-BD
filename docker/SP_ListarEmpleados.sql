@@ -1,10 +1,6 @@
-CREATE OR ALTER PROCEDURE dbo.SP_InsertarBitacora
-    @inUsuarioId INT = NULL
-    , @inUserName NVARCHAR(100) = NULL
-    , @inEvento NVARCHAR(100)
-    , @inResultado NVARCHAR(50) = NULL
-    , @inParametros NVARCHAR(MAX) = NULL
-    , @inIp NVARCHAR(45)
+CREATE OR ALTER PROCEDURE dbo.SP_ListarEmpleados
+    @inIdAdmin INT
+    , @inIp VARCHAR(45) = NULL
     , @outResultCode INT = NULL OUTPUT
 AS
 BEGIN
@@ -12,25 +8,27 @@ BEGIN
 
     SET @outResultCode = 0;
 
-    IF (@inUsuarioId IS NULL)
-        RETURN;
-
     BEGIN TRY
 
         DECLARE @idTipoEvento INT;
-        DECLARE @datos NVARCHAR(MAX);
 
         SELECT @idTipoEvento = te.id
         FROM dbo.TipoEvento te
-        WHERE (te.Nombre = @inEvento);
+        WHERE (te.Nombre = 'Listar empleados');
 
-        IF (@idTipoEvento IS NULL)
-            RETURN;
-
-        SET @datos = @inResultado;
-
-        IF (@inParametros IS NOT NULL)
-            SET @datos = COALESCE(@datos + ' | ', '') + @inParametros;
+        SELECT
+            e.id
+            , e.Cedula
+            , e.Nombre
+            , e.Apellido
+            , e.FechaIngreso
+            , e.FechaNacimiento
+            , p.Nombre AS Puesto
+            , e.Activo
+        FROM dbo.Empleado e
+        INNER JOIN dbo.Puesto p ON (p.id = e.idPuesto)
+        WHERE (e.Activo = 1)
+        ORDER BY e.Nombre, e.Apellido;
 
         INSERT INTO dbo.BitacoraEvento (
             idUsuario
@@ -39,16 +37,16 @@ BEGIN
             , Datos
         )
         VALUES (
-            @inUsuarioId
+            @inIdAdmin
             , @idTipoEvento
             , @inIp
-            , @datos
+            , 'Listado de empleados'
         );
 
     END TRY
     BEGIN CATCH
 
-        SET @outResultCode = 53099;
+        SET @outResultCode = 52099;
 
         INSERT INTO dbo.DBError (
             Username
@@ -61,7 +59,7 @@ BEGIN
             , [DateTime]
         )
         VALUES (
-            COALESCE(@inUserName, CAST(@inUsuarioId AS NVARCHAR(20)), 'unknown')
+            (SELECT TOP 1 u.Username FROM dbo.Usuario u WHERE (u.id = @inIdAdmin))
             , ERROR_NUMBER()
             , ERROR_STATE()
             , ERROR_SEVERITY()
@@ -70,8 +68,6 @@ BEGIN
             , ERROR_MESSAGE()
             , GETDATE()
         );
-
-        THROW;
 
     END CATCH
 END

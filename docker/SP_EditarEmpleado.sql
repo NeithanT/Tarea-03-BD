@@ -1,12 +1,13 @@
-CREATE OR ALTER PROCEDURE dbo.SP_InsertarEmpleado
-    @inNombre NVARCHAR(255)
+CREATE OR ALTER PROCEDURE dbo.SP_EditarEmpleado
+    @inIdEmpleado INT
+    , @inNombre NVARCHAR(255)
     , @inApellido NVARCHAR(255)
     , @inFechaIngreso DATE
     , @inFechaNacimiento DATE = NULL
-    , @inPuestoId INT
-    , @inActivo BIT = 1
-    , @inIdAdmin INT
+    , @inIdPuesto INT
+    , @inActivo BIT
     , @inIp VARCHAR(45) = NULL
+    , @inIdAdmin INT
     , @outResultCode INT = NULL OUTPUT
 AS
 BEGIN
@@ -20,26 +21,18 @@ BEGIN
 
         SELECT @idTipoEvento = te.id
         FROM dbo.TipoEvento te
-        WHERE (te.Nombre = 'Insercion exitosa');
+        WHERE (te.Nombre = 'Update exitoso');
 
         BEGIN TRANSACTION;
 
-            INSERT INTO dbo.Empleado (
-                Nombre
-                , Apellido
-                , FechaIngreso
-                , FechaNacimiento
-                , idPuesto
-                , Activo
-            )
-            VALUES (
-                @inNombre
-                , @inApellido
-                , @inFechaIngreso
-                , @inFechaNacimiento
-                , @inPuestoId
-                , @inActivo
-            );
+            UPDATE dbo.Empleado
+            SET Nombre = @inNombre
+                , Apellido = @inApellido
+                , FechaIngreso = @inFechaIngreso
+                , FechaNacimiento = @inFechaNacimiento
+                , idPuesto = @inIdPuesto
+                , Activo = @inActivo
+            WHERE (id = @inIdEmpleado);
 
             INSERT INTO dbo.BitacoraEvento (
                 idUsuario
@@ -51,7 +44,7 @@ BEGIN
                 @inIdAdmin
                 , @idTipoEvento
                 , @inIp
-                , CONCAT('Se insertó un empleado: ', @inNombre, ' ', @inApellido)
+                , CONCAT('Empleado editado: ', @inNombre, ' ', @inApellido, ' (ID: ', @inIdEmpleado, ')')
             );
 
         COMMIT TRANSACTION;
